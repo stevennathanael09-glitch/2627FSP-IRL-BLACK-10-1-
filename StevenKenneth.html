@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Flappy Bird Sederhana</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background: #1a1a2e;
+            font-family: Arial, sans-serif;
+        }
+        .game-container {
+            background: #16213e;
+            padding: 20px;
+            border-radius: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.7);
+        }
+        canvas {
+            display: block;
+            margin: 0 auto;
+            border-radius: 10px;
+            background: #87CEEB;
+            cursor: pointer;
+        }
+        .info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-top: 15px;
+            color: #fff;
+            font-size: 18px;
+        }
+        .info span {
+            background: #0f3460;
+            padding: 8px 18px;
+            border-radius: 30px;
+            font-weight: bold;
+        }
+        .btn-restart {
+            background: #e94560;
+            color: #fff;
+            border: none;
+            padding: 8px 25px;
+            border-radius: 30px;
+            font-size: 16px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.3s;
+        }
+        .btn-restart:hover {
+            background: #ff6b81;
+            transform: scale(1.05);
+        }
+        .hint {
+            color: #aaa;
+            margin-top: 10px;
+            text-align: center;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <canvas id="gameCanvas" width="400" height="600"></canvas>
+        <div class="info">
+            <span>🏆 Skor: <span id="scoreDisplay">0</span></span>
+            <button class="btn-restart" id="restartBtn">🔄 Mulai Ulang</button>
+        </div>
+        <div class="hint">Klik / Tekan Spasi untuk terbang 🐦</div>
+    </div>
+
+    <script>
+        // === Ambil elemen canvas ===
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreSpan = document.getElementById('scoreDisplay');
+
+        // === Ukuran & variabel game ===
+        const W = 400, H = 600;
+        const BIRD_RADIUS = 15;
+        const GRAVITY = 0.25;
+        const JUMP_FORCE = -5.5;
+        const PIPE_WIDTH = 60;
+        const PIPE_GAP = 160;
+        const PIPE_SPEED = 2.5;
+        const PIPE_INTERVAL = 90; // frame
+
+        // === State game ===
+        let bird = { x: 60, y: H/2, vy: 0 };
+        let pipes = [];
+        let score = 0;
+        let gameOver = false;
+        let frameCount = 0;
+
+        // === Fungsi reset ===
+        function resetGame() {
+            bird = { x: 60, y: H/2, vy: 0 };
+            pipes = [];
+            score = 0;
+            gameOver = false;
+            frameCount = 0;
+            updateScoreDisplay();
+        }
+
+        // === Update tampilan skor ===
+        function updateScoreDisplay() {
+            scoreSpan.textContent = score;
+        }
+
+        // === Buat pipa baru ===
+        function createPipe() {
+            const minY = 60;
+            const maxY = H - PIPE_GAP - 60;
+            const topHeight = Math.random() * (maxY - minY) + minY;
+            pipes.push({
+                x: W,
+                topHeight: topHeight,
+                bottomY: topHeight + PIPE_GAP,
+                scored: false // supaya skor tidak nambah dobel
+            });
+        }
+
+        // === Cek collision ===
+        function checkCollision(pipe) {
+            // Bird sebagai lingkaran, pipa sebagai kotak
+            const bx = bird.x, by = bird.y, r = BIRD_RADIUS;
+
+            // Pipa atas (0,0) sampai (PIPE_WIDTH, topHeight)
+            const left = pipe.x;
+            const right = pipe.x + PIPE_WIDTH;
+            const topTop = 0;
+            const bottomTop = pipe.topHeight;
+            const topBottom = pipe.bottomY;
+            const bottomBottom = H;
+
+            // Cek jarak terdekat bird ke kotak pipa atas
+            const closestXTop = Math.max(left, Math.min(bx, right));
+            const closestYTop = Math.max(topTop, Math.min(by, bottomTop));
+            const dxTop = bx - closestXTop;
+            const dyTop = by - closestYTop;
+            if (dxTop * dxTop + dyTop * dyTop < r * r) return true;
+
+            // Cek pipa bawah
+            const closestXBottom = Math.max(left, Math.min(bx, right));
+            const closestYBottom = Math.max(topBottom, Math.min(by, bottomBottom));
+            const dxBottom = bx - closestXBottom;
+            const dyBottom = by - closestYBottom;
+            if (dxBottom * dxBottom + dyBottom * dyBottom < r * r) return true;
+
+            return false;
+        }
+
+        // === Update game ===
+        function update() {
+            if (gameOver) return;
+
+            // 1. Gerakan bird
+            bird.vy += GRAVITY;
+            bird.y += bird.vy;
+
+            // 2. Batas atas-bawah (mati)
+            if (bird.y - BIRD_RADIUS < 0 || bird.y + BIRD_RADIUS > H) {
+                gameOver = true;
+                return;
+            }
+
+            // 3. Spawn pipa
+            frameCount++;
+            if (frameCount % PIPE_INTERVAL === 0) {
+                createPipe();
+            }
+
+            // 4. Gerakan pipa & cek skor
+            for (let i = pipes.length - 1; i >= 0; i--) {
+                const p = pipes[i];
+                p.x -= PIPE_SPEED;
+
+                // Skor: jika pipa sudah melewati bird dan belum discore
+                if (!p.scored && p.x + PIPE_WIDTH < bird.x) {
+                    p.scored = true;
+                    score++;
+                    updateScoreDisplay();
+                }
+
+                // Hapus pipa di luar layar
+                if (p.x + PIPE_WIDTH < 0) {
+                    pipes.splice(i, 1);
+                    continue;
+                }
+
+                // Collision dengan pipa
+                if (checkCollision(p)) {
+                    gameOver = true;
+                    return;
+                }
+            }
+        }
+
+        // === Gambar semuanya ===
+        function draw() {
+            // Langit
+            ctx.clearRect(0, 0, W, H);
+            
+            // Gradasi langit
+            const grad = ctx.createLinearGradient(0, 0, 0, H);
+            grad.addColorStop(0, '#4facfe');
+            grad.addColorStop(1, '#87CEEB');
+            ctx.fillStyle = grad;
+            ctx.fillRect(0, 0, W, H);
+
+            // Gambar awan hiasan (opsional)
+            ctx.fillStyle = 'rgba(255,255,255,0.3)';
+            ctx.beginPath();
+            ctx.arc(60, 80, 35, 0, Math.PI*2);
+            ctx.arc(100, 70, 30, 0, Math.PI*2);
+            ctx.arc(130, 85, 28, 0, Math.PI*2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(300, 130, 40, 0, Math.PI*2);
+            ctx.arc(340, 115, 32, 0, Math.PI*2);
+            ctx.arc(370, 135, 30, 0, Math.PI*2);
+            ctx.fill();
+
+            // Pipa
+            pipes.forEach(p => {
+                // Pipa atas
+                ctx.fillStyle = '#2e7d32';
+                ctx.shadowColor = '#1b5e20';
+                ctx.shadowBlur = 10;
+                ctx.fillRect(p.x, 0, PIPE_WIDTH, p.topHeight);
+                // Tutup pipa atas
+                ctx.fillStyle = '#388e3c';
+                ctx.fillRect(p.x - 8, p.topHeight - 20, PIPE_WIDTH + 16, 20);
+                // Pipa bawah
+                ctx.fillStyle = '#2e7d32';
+                ctx.fillRect(p.x, p.bottomY, PIPE_WIDTH, H - p.bottomY);
+                ctx.fillStyle = '#388e3c';
+                ctx.fillRect(p.x - 8, p.bottomY, PIPE_WIDTH + 16, 20);
+                ctx.shadowBlur = 0;
+            });
+
+            // Burung (bentuk lebih keren)
+            const b = bird;
+            // Badan
+            ctx.shadowColor = 'rgba(0,0,0,0.3)';
+            ctx.shadowBlur = 15;
+            ctx.beginPath();
+            ctx.arc(b.x, b.y, BIRD_RADIUS, 0, Math.PI * 2);
+            ctx.fillStyle = '#fdd835';
+            ctx.fill();
+            ctx.strokeStyle = '#f9a825';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+
+            // Mata
+            ctx.shadowBlur = 0;
+            ctx.beginPath();
+            ctx.arc(b.x + 7, b.y - 5, 5, 0, Math.PI * 2);
+            ctx.fillStyle = 'white';
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(b.x + 10, b.y - 7, 2.5, 0, Math.PI * 2);
+            ctx.fillStyle = '#1a1a2e';
+            ctx.fill();
+
+            // Paruh
+            ctx.beginPath();
+            ctx.moveTo(b.x + 14, b.y + 2);
+            ctx.lineTo(b.x + 24, b.y + 6);
+            ctx.lineTo(b.x + 14, b.y + 10);
+            ctx.fillStyle = '#ff6f00';
+            ctx.fill();
+
+            // Sayap (animasi kecil)
+            ctx.beginPath();
+            ctx.ellipse(b.x - 5, b.y - 2, 12, 8, -0.3, 0, Math.PI * 2);
+            ctx.fillStyle = '#fbc02d';
+            ctx.fill();
+            ctx.strokeStyle = '#f57f17';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
+            // Game Over overlay
+            if (gameOver) {
+                ctx.shadowBlur = 0;
+                ctx.fillStyle = 'rgba(0,0,0,0.6)';
+                ctx.fillRect(0, 0, W, H);
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 40px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText('💀 GAME OVER', W/2, H/2 - 20);
+                ctx.font = '22px Arial';
+                ctx.fillText('Skor: ' + score, W/2, H/2 + 40);
+                ctx.fillStyle = '#ffd54f';
+                ctx.font = '18px Arial';
+                ctx.fillText('Klik Restart atau Tekan R', W/2, H/2 + 90);
+            }
+
+            ctx.shadowBlur = 0;
+        }
+
+        // === Game loop ===
+        function gameLoop() {
+            update();
+            draw();
+            requestAnimationFrame(gameLoop);
+        }
+
+        // === Event: lompat ===
+        function jump() {
+            if (gameOver) return;
+            bird.vy = JUMP_FORCE;
+        }
+
+        // === Event listener ===
+        canvas.addEventListener('click', jump);
+        document.addEventListener('keydown', (e) => {
+            if (e.key === ' ' || e.key === 'Space') {
+                e.preventDefault();
+                jump();
+            }
+            if (e.key === 'r' || e.key === 'R') {
+                resetGame();
+            }
+        });
+
+        document.getElementById('restartBtn').addEventListener('click', resetGame);
+
+        // === Mulai ===
+        resetGame();
+        gameLoop();
+    </script>
+</body>
+</html>
