@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Game Online Multiplayer Simpel</title>
+  <!-- Library PeerJS untuk koneksi peer-to-peer -->
+  <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #1e1e24;
+      color: #fff;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      margin: 0;
+      padding: 20px;
+    }
+    #setup {
+      background: #2b2d42;
+      padding: 20px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+    input, button {
+      padding: 8px 12px;
+      margin: 5px;
+      border-radius: 4px;
+      border: none;
+    }
+    button {
+      background: #ef233c;
+      color: #fff;
+      cursor: pointer;
+      font-weight: bold;
+    }
+    button:hover {
+      background: #d90429;
+    }
+    canvas {
+      border: 3px solid #edf2f4;
+      background: #000;
+    }
+    #status {
+      margin-top: 10px;
+      font-weight: bold;
+      color: #8d99ae;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>Game Multiplayer P2P (KOTAK MERAH & BIRU)</h1>
+
+  <div id="setup">
+    <p>ID Kamu: <span id="my-id" style="color: #4cc9f0; font-weight: bold;">Loading...</span></p>
+    <input type="text" id="peer-id-input" placeholder="Masukkan ID Teman" />
+    <button id="connect-btn">Hubungkan & Main</button>
+    <div id="status">Status: Menunggu koneksi...</div>
+    <div id="role" style="margin-top:6px;color:#cbd5e1;"></div>
+  </div>
+
+  <canvas id="gameCanvas" width="600" height="400"></canvas>
+  <p><small>Gunakan panah papan ketik (Keyboard Arrows) untuk bergerak.</small></p>
+
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const statusEl = document.getElementById('status');
+    const roleEl = document.getElementById('role');
+
+    let peer = null;
+    let conn = null;
+    let isHost = false;
+    const playerSize = 40;
+    const speed = 5;
+
+    // Posisi awal pemain
+    let player1 = { x: 50, y: 180, color: '#ef233c' }; // Merah (Host)
+    let player2 = { x: 510, y: 180, color: '#4cc9f0' }; // Biru (Guest)
+
+    // Untuk smoothing posisi remote
+    let remoteTarget = { x: player2.x, y: player2.y };
+    const smoothing = 0.2; // 0..1 (lebih kecil = lebih lambat/interpolasi lebih halus)
+
+    // Throttle pengiriman posisi
+    const sendIntervalMs = 50; // max ~20 updates/sec
+    let lastSendTime = 0;
+
+    // Inisialisasi PeerJS (debug untuk console)
+    peer = new Peer({ debug: 1 });
+
+    peer.on('open', (id) => {
+      document.getElementById('my-id').innerText = id;
+      updateStatus('Menunggu koneksi...');
+    });
+
+    peer.on('error', (err) => {
+      console.error('Peer error:', err);
+      updateStatus('Error pada Peer: ' + (err && err.type ? err.type : err));
+    });
+
+    peer.on('disconnected', () => {
+      updateStatus('Peer terputus. Coba refresh halaman.');
+    });
+
+    // Menerima koneksi masuk (Host)
+    peer.on('connection', (connection) => {
+      if (conn && conn.open) {
+        // Jika sudah ada koneksi, tolak koneksi baru
+        connection.on('open', () => {
+          connection.send({ type: 'error', message: 'Sudah ada pemain terhubung.' });
+          connection.close();
+        });
+        return;
+      }
+      conn = connection;
+      isHost = true;
+      setupConnectionHandlers(true);
+    });
+
+    // Menghubungkan ke peer lain (Guest)
+    document.getElementById('connect-btn').addEventListener('click', () => {
+      const destId = document.getElementById('peer-id-input').value.trim();
+      if (!destId) return;
+      if (conn && conn.open) {
+        updateStatus('Sudah terhubung ke seseorang.');
+        return;
+      }
+      conn = peer.connect(destId, { reliable: true });
+      isHost = false;
+      setupConnectionHandlers(false);
+    });
+
+    function setupConnectionHandlers(acceptedAsHost) {
+      updateStatus('Menghubungkan...');
+      roleEl.innerText = acceptedAsHost ? 'Role: Host (Merah)' : 'Role: Guest (Biru)';
+
+      conn.on('open', () => {
+        updateStatus('Terhubung! Selamat bermain.');
+        // Kirim init state supaya kedua sisi sinkron saat mulai
+        const myPlayer = isHost ? player1 : player2;
+        conn.send({ type: 'init', role: (isHost ? 'host' : 'guest'), x: myPlayer.x, y: myPlayer.y });
+      });
+
+      conn.on('data', (data) => {
+        if (!data || typeof data !== 'object') return;
+        switch (data.type) {
+          case 'init':
+            // Sinkron posisi awal lawan dan role
+            if (isHost) {
+              // Host menerima init dari guest: set posisi guest sebagai player2
+              remoteTarget.x = data.x ?? remoteTarget.x;
+              remoteTarget.y = data.y ?? remoteTarget.y;
+              player2.x = remoteTarget.x;
+              player2.y = remoteTarget.y;
+            } else {
+              // Guest menerima init dari host: host mungkin kirim posisi host
+              remoteTarget.x = data.x ?? remoteTarget.x;
+              remoteTarget.y = data.y ?? remoteTarget.y;
+              player1.x = remoteTarget.x;
+              player1.y = remoteTarget.y;
+            }
+            break;
+          case 'pos':
+            // Update posisi lawan (gunakan target untuk smoothing)
+            if (isHost) {
+              // Host menerima posisi guest -> update player2 target
+              remoteTarget.x = clamp(data.x, 0, canvas.width - playerSize) ?? remoteTarget.x;
+              remoteTarget.y = clamp(data.y, 0, canvas.height - playerSize) ?? remoteTarget.y;
+            } else {
+              // Guest menerima posisi host -> update player1 target
+              remoteTarget.x = clamp(data.x, 0, canvas.width - playerSize) ?? remoteTarget.x;
+              remoteTarget.y = clamp(data.y, 0, canvas.height - playerSize) ?? remoteTarget.y;
+            }
+            break;
+          case 'error':
+            console.warn('Dari peer:', data.message);
+            updateStatus('Pesan dari peer: ' + data.message);
+            break;
+          default:
+            // versi ke depan: handle other message types
+            break;
+        }
+      });
+
+      conn.on('close', () => {
+        updateStatus('Koneksi tertutup.');
+        roleEl.innerText = '';
+        conn = null;
+      });
+
+      conn.on('error', (err) => {
+        console.error('Conn error:', err);
+        updateStatus('Koneksi error: ' + (err && err.type ? err.type : err));
+      });
+    }
+
+    function updateStatus(text) {
+      statusEl.innerText = 'Status: ' + text;
+    }
+
+    // Input Papan Ketik
+    const keys = {};
+    window.addEventListener('keydown', (e) => { keys[e.key] = true; });
+    window.addEventListener('keyup', (e) => { keys[e.key] = false; });
+
+    function clamp(v, a, b) {
+      if (v === undefined || v === null) return v;
+      return Math.max(a, Math.min(b, v));
+    }
+
+    function update() {
+      const now = performance.now();
+      let myPlayer = isHost ? player1 : player2;
+      let moved = false;
+
+      if (keys['ArrowUp'] && myPlayer.y > 0) { myPlayer.y -= speed; moved = true; }
+      if (keys['ArrowDown'] && myPlayer.y < canvas.height - playerSize) { myPlayer.y += speed; moved = true; }
+      if (keys['ArrowLeft'] && myPlayer.x > 0) { myPlayer.x -= speed; moved = true; }
+      if (keys['ArrowRight'] && myPlayer.x < canvas.width - playerSize) { myPlayer.x += speed; moved = true; }
+
+      // Kirim koordinat posisi ke pemain lawan (throttled)
+      if (moved && conn && conn.open && (now - lastSendTime) >= sendIntervalMs) {
+        lastSendTime = now;
+        try {
+          conn.send({ type: 'pos', x: myPlayer.x, y: myPlayer.y });
+        } catch (err) {
+          console.warn('Gagal mengirim posisi:', err);
+        }
+      }
+
+      // Interpolasi remoteTarget -> apply to the appropriate player
+      if (isHost) {
+        // remoteTarget mengacu ke player2
+        player2.x += (remoteTarget.x - player2.x) * smoothing;
+        player2.y += (remoteTarget.y - player2.y) * smoothing;
+      } else {
+        // remoteTarget mengacu ke player1
+        player1.x += (remoteTarget.x - player1.x) * smoothing;
+        player1.y += (remoteTarget.y - player1.y) * smoothing;
+      }
+
+      // Pastikan posisi tetap dalam batas
+      player1.x = clamp(player1.x, 0, canvas.width - playerSize);
+      player1.y = clamp(player1.y, 0, canvas.height - playerSize);
+      player2.x = clamp(player2.x, 0, canvas.width - playerSize);
+      player2.y = clamp(player2.y, 0, canvas.height - playerSize);
+    }
+
+    function draw() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Gambar Player 1 (Merah)
+      ctx.fillStyle = player1.color;
+      ctx.fillRect(Math.round(player1.x), Math.round(player1.y), playerSize, playerSize);
+
+      // Gambar Player 2 (Biru)
+      ctx.fillStyle = player2.color;
+      ctx.fillRect(Math.round(player2.x), Math.round(player2.y), playerSize, playerSize);
+    }
+
+    function gameLoop() {
+      update();
+      draw();
+      requestAnimationFrame(gameLoop);
+    }
+
+    gameLoop();
+  </script>
+</body>
+</html>
