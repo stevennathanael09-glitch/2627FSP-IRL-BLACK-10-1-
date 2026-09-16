@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Festival Mid-Autumn & Mooncake: Terbang ke Bulan! 🥮🌕</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            background-color: #fdf8f0;
+            color: #333;
+            overflow-x: hidden;
+        }
+        header {
+            text-align: center;
+            background-color: #8b0000;
+            color: #fff;
+            padding: 40px 20px;
+            border-bottom: 5px solid #ffca28;
+            position: relative;
+        }
+        header h1 {
+            font-size: 3em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+        header p {
+            font-size: 1.2em;
+            opacity: 0.9;
+        }
+        section {
+            background: #fff;
+            margin: 30px auto;
+            padding: 30px;
+            border-radius: 12px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            max-width: 900px;
+            width: 90%;
+        }
+        h2 {
+            color: #8b0000;
+            border-bottom: 2px solid #8b0000;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        
+        /* Pemutar Musik Web Audio API (Tanpa File Eksternal) */
+        .music-box {
+            background: linear-gradient(135deg, #8b0000, #5a0000);
+            color: #fff;
+            padding: 20px;
+            border-radius: 10px;
+            text-align: center;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+            border: 2px solid #ffca28;
+        }
+        .music-box p {
+            margin-top: 0;
+            font-weight: bold;
+            font-size: 1.1em;
+        }
+        .music-btn {
+            background-color: #ffca28;
+            color: #8b0000;
+            border: none;
+            padding: 10px 25px;
+            font-size: 1.1em;
+            border-radius: 25px;
+            cursor: pointer;
+            font-weight: bold;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+            transition: all 0.2s ease;
+            margin-top: 5px;
+        }
+        .music-btn:hover {
+            background-color: #fff;
+            transform: scale(1.05);
+        }
+
+        /* Style Game Tantangan */
+        #game {
+            background-color: #1a252f;
+            color: #ecf0f1;
+            text-align: center;
+            position: relative;
+            overflow: hidden;
+            height: 450px;
+            border: 3px solid #f1c40f;
+            border-radius: 8px;
+            cursor: none;
+        }
+        #game h2 {
+            color: #f1c40f;
+            border-bottom-color: #f1c40f;
+            margin-top: 10px;
+        }
+        #rocket {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 2.8em;
+            z-index: 10;
+            pointer-events: none;
+        }
+        .game-item {
+            position: absolute;
+            font-size: 2em;
+            user-select: none;
+            pointer-events: none;
+        }
+        #score-board {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 1.1em;
+            background: rgba(0,0,0,0.7);
+            padding: 8px 15px;
+            border-radius: 5px;
+            text-align: right;
+            z-index: 15;
+            border: 1px solid #f1c40f;
+        }
+        #game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0,0,0,0.9);
+            padding: 30px;
+            border-radius: 10px;
+            display: none;
+            z-index: 20;
+            border: 2px solid #e74c3c;
+            width: 80%;
+            max-width: 350px;
+        }
+        #start-game-btn, #restart-game-btn {
+            background-color: #f1c40f;
+            color: #2c3e50;
+            border: none;
+            padding: 12px 24px;
+            font-size: 1.1em;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            margin-top: 15px;
+            transition: background 0.2s;
+        }
+        #start-game-btn:hover, #restart-game-btn:hover {
+            background-color: #f39c12;
+        }
+
+        /* Style Aktivitas Holis (Storytelling & Masak) */
+        ul {
+            list-style: none;
+            padding: 0;
+        }
+        li {
+            background-color: #fffde7;
+            border-left: 5px solid #8b0000;
+            margin-bottom: 15px;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            transition: transform 0.2s ease;
+        }
+        li:hover {
+            transform: translateX(10px);
+        }
+        li strong {
+            color: #c62828;
+            font-size: 1.2em;
+            display: block;
+            margin-bottom: 5px;
+        }
+        footer {
+            text-align: center;
+            padding: 20px;
+            background-color: #333;
+            color: #fff;
+            margin-top: 30px;
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>🌕 Festival Mid-Autumn & Mooncake 🥮</h1>
+        <p>Mengenal Tradisi, Sejarah, dan Keceriaan Festival Bulan!</p>
+    </header>
+
+    <!-- Pemutar Musik: Menggunakan Web Audio Synthesizer Pentatonik Tionghoa (Pasti Bunyi!) -->
+    <section class="music-box">
+        <p>🎵 <strong>Suasana Musik Pentatonik Tradisional Festival Bulan:</strong></p>
+        <button class="music-btn" id="toggle-music-btn" onclick="toggleMusic()">▶️ Putar Musik Festival</button>
+        <p style="margin-top: 10px; font-weight: normal;"><small id="music-status">*Status: Musik mati. Klik tombol di atas untuk menyalakan!</small></p>
+    </section>
+
+    <section id="tentang">
+        <h2>🥮 Apa itu Mooncake?</h2>
+        <p>Mooncake (Kue Bulan) adalah makanan tradisional Tionghoa yang dinikmati selama Festival Pertengahan Musim Gugur. Bentuknya yang bulat melambangkan kelengkapan dan kebersamaan keluarga.</p>
+    </section>
+
+    <section id="sejarah">
+        <h2>📜 Sejarah & Legenda</h2>
+        <p>Festival ini dirayakan pada hari ke-15 bulan ke-8 dalam kalender lunar, saat bulan berada di titik paling terang dan bulat.</p>
+        <ul>
+            <li><strong>Legenda Chang'e:</strong> Kisah Dewi Bulan yang meminum ramuan keabadian demi melindungi rakyatnya.</li>
+            <li><strong>Pesan Rahasia Dinasti Yuan:</strong> Konon, kue bulan digunakan sebagai media untuk menyembunyikan pesan rahasia guna mengoordinasikan revolusi.</li>
+        </ul>
+    </section>
+
+    <!-- Game Tantangan -->
+    <section id="game">
+        <h2>🎮 Game: Misi Menuju Bulan 🚀</h2>
+        <p id="game-desc" style="font-size: 0.9em; margin-bottom: 5px;">Tangkap 🥮 (+10 Poin) | Hindari ☄️ (Game Over) | Kue Terlewat (-5 Poin)!</p>
+        
+        <div id="score-board">
+            Skor: <span id="score">0</span><br>
+            Level: <span id="level">1</span>
+        </div>
+        
+        <div id="rocket">🚀</div>
+        
+        <div id="game-over">
+            <h3 style="color: #e74c3c; margin: 0 0 10px 0;">GAME OVER!</h3>
+            <p id="death-reason" style="font-size: 0.9em; color: #bdc3c7;"></p>
+            <p>Skor Akhir: <strong id="final-score" style="color: #f1c40f; font-size: 1.4em;">0</strong></p>
+            <button id="restart-game-btn" onclick="startGame()">Coba Lagi 🔄</button>
+        </div>
+        
+        <button id="start-game-btn" onclick="startGame()">Mulai Tantangan! 🚀</button>
+    </section>
+
+    <!-- Aktivitas: Storytelling dan Masak -->
+    <section id="aktivitas-holis">
+        <h2>🏮 Aktivitas Utama Festival di Holis</h2>
+        <p>Berikut adalah dua kegiatan utama dalam perayaan Mooncake Festival di Holis (Penabur Bandung):</p>
+        <ul>
+            <li>
+                <strong>📖 Sesi Storytelling Legenda Bulan:</strong> 
+                Anak-anak dan para siswa mendengarkan dongeng interaktif tentang kisah klasik Dewi Chang'e, Pemanah Hou Yi, serta Kelinci Bulan. Cerita dibawakan secara menarik dengan alat peraga dan narasi ekspresif untuk mengenalkan nilai keberanian dan kasih sayang di balik Festival Pertengahan Musim Gugur.
+            </li>
+            <li>
+                <strong>👨‍🍳 Workshop Masak & Membuat Mooncake:</strong> 
+                Kegiatan praktik langsung memasak dan mencetak kue bulan tradisional maupun kreasi modern (*snow skin mooncake*). Peserta belajar memilih bahan, membuat adonan, mengisi rasa pasta kacang merah atau teratai, hingga menggunakan cetakan bermotif indah untuk dibawa pulang dan dinikmati bersama keluarga.
+            </li>
+        </ul>
+    </section>
+
+    <footer>
+        <p>&copy; 2023 Festival Mid-Autumn & Mooncake. All rights reserved.</p>
+    </footer>
+
+    <script>
+        /* =============================================================
+           SISTEM MUSIK FESTIVAL BULAN (Web Audio API)
+           Melodi Tradisional Pentatonik Tionghoa khas Guzheng/Pipa
+           ============================================================= */
+        let audioCtx = null;
+        let isMusicPlaying = false;
+        let musicInterval = null;
+        let noteIndex = 0;
+
+        // Skala Pentatonik Tionghoa Tradisional (Gong, Shang, Jiao, Zhi, Yu)
+        // D4, E4, F#4, A4, B4, D5, E5, F#5
+        const traditionalScale = [293.66, 329.63, 369.99, 440.00, 493.88, 587.33, 659.25, 739.99];
+
+        // Frasa lagu rakyat khas Festival Pertengahan Musim Gugur (Bulan di Atas Sungai)
+        const moonFestivalMelody = [
+            0, 1, 3, 4, 3, 1, 0,
+            3, 4, 5, 7, 5, 4, 3,
+            4, 3, 1, 0, 1, 3, 0,
+            5, 4, 3, 1, 0, 1, 0
+        ];
+
+        function playTraditionalNote() {
+            if (!audioCtx) return;
+
+            // Ambil indeks nada dari susunan lagu
+            const scaleIdx = moonFestivalMelody[noteIndex];
+            const freq = traditionalScale[scaleIdx];
+            noteIndex = (noteIndex + 1) % moonFestivalMelody.length;
+
+            // Generator Suara Utama (Simulasi Alat Musik Petik Guzheng)
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+
+            osc.type = 'triangle'; // Suara lembut menyerupai instrumen kayu/senar
+            osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+
+            // Envelope Petikan Senar (Pluck Effect)
+            gain.gain.setValueAtTime(0.001, audioCtx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.3, audioCtx.currentTime + 0.03); // Serangan cepat
+            gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.8); // Dengkung panjang
+
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+
+            osc.start();
+            osc.stop(audioCtx.currentTime + 0.8);
+
+            // Menambahkan Harmoni Nada Rendah (Bass Bawah) Setiap 4 Ketukan
+            if (noteIndex % 4 === 0) {
+                const bassOsc = audioCtx.createOscillator();
+                const bassGain = audioCtx.createGain();
+
+                bassOsc.type = 'sine';
+                bassOsc.frequency.setValueAtTime(freq / 2, audioCtx.currentTime); // 1 Oktaf lebih rendah
+
+                bassGain.gain.setValueAtTime(0.001, audioCtx.currentTime);
+                bassGain.gain.exponentialRampToValueAtTime(0.15, audioCtx.currentTime + 0.05);
+                bassGain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 1.2);
+
+                bassOsc.connect(bassGain);
+                bassGain.connect(audioCtx.destination);
+
+                bassOsc.start();
+                bassOsc.stop(audioCtx.currentTime + 1.2);
+            }
+        }
+
+        function toggleMusic() {
+            const btn = document.getElementById('toggle-music-btn');
+            const status = document.getElementById('music-status');
+
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+
+            if (!isMusicPlaying) {
+                isMusicPlaying = true;
+                btn.innerText = "⏸️ Hentikan Musik";
+                status.innerText = "*Status: 🎵 Memainkan Melodi Tradisional Festival Bulan...";
+                status.style.color = "#ffca28";
+                
+                // Memicu alur lagu setiap 400ms untuk tempo sedang yang tenang
+                playTraditionalNote();
+                musicInterval = setInterval(playTraditionalNote, 400);
+            } else {
+                isMusicPlaying = false;
+                clearInterval(musicInterval);
+                btn.innerText = "▶️ Putar Musik Festival";
+                status.innerText = "*Status: Musik dihentikan.";
+                status.style.color = "#fff";
+            }
+        }
+
+        /* =============================================================
+           LOGIKA GAME TERBANG KE BULAN
+           ============================================================= */
+        const rocket = document.getElementById('rocket');
+        const gameSection = document.getElementById('game');
+        const scoreSpan = document.getElementById('score');
+        const levelSpan = document.getElementById('level');
+        const finalScoreSpan = document.getElementById('final-score');
+        const deathReason = document.getElementById('death-reason');
+        const gameOverDiv = document.getElementById('game-over');
+        const startGameBtn = document.getElementById('start-game-btn');
+
+        let score = 0;
+        let level = 1;
+        let isPlaying = false;
+        let animationFrameId;
+        let spawnTimer;
+        let activeItems = [];
+        let baseSpeed = 4.5;
+        let spawnInterval = 650;
+
+        // Otomatis nyalakan musik saat pertama kali layar diklik jika belum aktif
+        document.body.addEventListener('click', () => {
+            if (!isMusicPlaying) {
+                toggleMusic();
+            }
+        }, { once: true });
+
+        // Gerakkan roket mengikuti kursor mouse
+        gameSection.addEventListener('mousemove', (e) => {
+            if (!isPlaying) return;
+            const rect = gameSection.getBoundingClientRect();
+            let x = e.clientX - rect.left;
+            
+            if (x < 25) x = 25;
+            if (x > rect.width - 25) x = rect.width - 25;
+            
+            rocket.style.left = x + 'px';
+        });
+
+        function startGame() {
+            // Aktifkan musik jika belum menyala saat main game
+            if (!isMusicPlaying) {
+                toggleMusic();
+            }
+
+            isPlaying = true;
+            score = 0;
+            level = 1;
+            baseSpeed = 4.5;
+            spawnInterval = 650;
+            scoreSpan.innerText = score;
+            levelSpan.innerText = level;
+            
+            activeItems.forEach(item => item.element.remove());
+            activeItems = [];
+
+            gameOverDiv.style.display = 'none';
+            startGameBtn.style.display = 'none';
+            rocket.style.display = 'block';
+
+            scheduleSpawns();
+            gameLoop();
+        }
+
+        function scheduleSpawns() {
+            if (!isPlaying) return;
+            
+            spawnItem();
+            
+            let nextSpawn = Math.max(250, spawnInterval - (level * 40));
+            spawnTimer = setTimeout(scheduleSpawns, nextSpawn);
+        }
+
+        function spawnItem() {
+            const itemEl = document.createElement('div');
+            itemEl.className = 'game-item';
+            
+            const isMeteor = Math.random() < 0.45;
+            const type = isMeteor ? 'meteor' : 'mooncake';
+            itemEl.innerText = isMeteor ? '☄️' : '🥮';
+
+            const arenaWidth = gameSection.offsetWidth;
+            const posX = Math.random() * (arenaWidth - 50) + 25;
+            
+            itemEl.style.left = posX + 'px';
+            itemEl.style.top = '0px';
+            gameSection.appendChild(itemEl);
+
+            activeItems.push({
+                element: itemEl,
+                type: type,
+                x: posX,
+                y: 0,
+                speed: baseSpeed + (Math.random() * 2.5) + (level * 0.6)
+            });
+        }
+
+        function gameLoop() {
+            if (!isPlaying) return;
+
+            const rocketRect = rocket.getBoundingClientRect();
+            const arenaRect = gameSection.getBoundingClientRect();
+
+            for (let i = activeItems.length - 1; i >= 0; i--) {
+                let item = activeItems[i];
+                item.y += item.speed;
+                item.element.style.top = item.y + 'px';
+
+                const itemRect = item.element.getBoundingClientRect();
+
+                // Deteksi Tabrakan
+                if (
+                    rocketRect.left < itemRect.right &&
+                    rocketRect.right > itemRect.left &&
+                    rocketRect.top < itemRect.bottom &&
+                    rocketRect.bottom > itemRect.top
+                ) {
+                    if (item.type === 'meteor') {
+                        endGame("Roketmu hancur menabrak meteor! ☄️");
+                        return;
+                    } else {
+                        score += 10;
+                        scoreSpan.innerText = score;
+                        checkLevelUp();
+                        item.element.remove();
+                        activeItems.splice(i, 1);
+                        continue;
+                    }
+                }
+
+                // Jika menyentuh bawah arena
+                if (item.y > arenaRect.height - 35) {
+                    if (item.type === 'mooncake') {
+                        score = Math.max(0, score - 5);
+                        scoreSpan.innerText = score;
+                    }
+                    item.element.remove();
+                    activeItems.splice(i, 1);
+                }
+            }
+
+            animationFrameId = requestAnimationFrame(gameLoop);
+        }
+
+        function checkLevelUp() {
+            let newLevel = Math.floor(score / 50) + 1;
+            if (newLevel > level) {
+                level = newLevel;
+                levelSpan.innerText = level;
+                baseSpeed += 0.9;
+            }
+        }
+
+        function endGame(reason) {
+            isPlaying = false;
+            clearTimeout(spawnTimer);
+            cancelAnimationFrame(animationFrameId);
+
+            deathReason.innerText = reason;
+            finalScoreSpan.innerText = score;
+            gameOverDiv.style.display = 'block';
+            rocket.style.display = 'none';
+        }
+    </script>
+</body>
+</html>
