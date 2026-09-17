@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+  <title>iPhone 17 Pro - Temukan Pengalaman Baru</title>
+
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: Arial, Helvetica, sans-serif;
+    }
+
+    :root {
+      --primary: #0071e3;
+      --dark: #1d1d1f;
+      --gray: #6e6e73;
+      --light: #f5f5f7;
+      --white: #ffffff;
+      --gold: #c9a227;
+    }
+
+    body {
+      background: var(--white);
+      color: var(--dark);
+      line-height: 1.6;
+    }
+
+    /* NAVBAR */
+    nav {
+      height: 60px;
+      background: rgba(255,255,255,0.95);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 8%;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      border-bottom: 1px solid #eee;
+    }
+
+    .logo {
+      font-size: 24px;
+      font-weight: bold;
+    }
+
+    nav a {
+      text-decoration: none;
+      color: var(--dark);
+      margin-left: 28px;
+      font-size: 14px;
+    }
+
+    nav a:hover {
+      color: var(--primary);
+    }
+
+    /* HERO */
+    .hero {
+      min-height: 680px;
+      background: var(--light);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 80px 8%;
+      gap: 60px;
+    }
+
+    .hero-text {
+      flex: 1;
+    }
+
+    .small-title {
+      color: var(--gold);
+      font-size: 18px;
+      font-weight: bold;
+      margin-bottom: 15px;
+    }
+
+    .hero h1 {
+      font-size: 64px;
+      line-height: 1.05;
+      margin-bottom: 25px;
+      letter-spacing: -2px;
+    }
+
+    .hero h1 span {
+      color: var(--primary);
+    }
+
+    .hero p {
+      color: var(--gray);
+      font-size: 20px;
+      max-width: 550px;
+      margin-bottom: 35px;
+    }
+
+    .cta {
+      display: inline-block;
+      background: var(--primary);
+      color: white;
+      text-decoration: none;
+      padding: 16px 30px;
+      border-radius: 30px;
+      font-size: 17px;
+      font-weight: bold;
+      transition: 0.3s;
+    }
+
+    .cta:hover {
+      background: #005bb5;
+      transform: scale(1.04);
+    }
+
+    /* PHONE VISUAL */
+    .hero-phone {
+      flex: 1;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .phone {
+      width: 250px;
+      height: 500px;
+      background: linear-gradient(145deg, #2c2c2e, #080808);
+      border-radius: 45px;
+      border: 7px solid #333;
+      box-shadow: 0 30px 70px rgba(0,0,0,0.35);
+      position: relative;
+    }
+
+    .phone-screen {
+      position: absolute;
+      inset: 5px;
+      border-radius: 37px;
+      background:
+        radial-gradient(circle at 30% 30%, #304c72, transparent 30%),
+        radial-gradient(circle at 70% 70%, #592b65, transparent 35%),
+        linear-gradient(145deg, #101522, #020204);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: white;
+      font-size: 42px;
+      font-weight: bold;
+    }
+
+    .dynamic-island {
+      position: absolute;
+      top: 13px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 90px;
+      height: 25px;
+      background: black;
+      border-radius: 20px;
+    }
+
+    .camera {
+      position: absolute;
+      top: 25px;
+      left: 25px;
+      width: 85px;
+      height: 100px;
+      background: #222;
+      border-radius: 20px;
+      z-index: 2;
+    }
+
+    .lens {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: #050505;
+      border: 3px solid #777;
+      position: absolute;
+    }
+
+    .lens.one {
+      top: 12px;
+      left: 12px;
+    }
+
+    .lens.two {
+      top: 12px;
+      right: 12px;
+    }
+
+    .lens.three {
+      bottom: 12px;
+      left: 28px;
+    }
+
+    /* BENEFITS */
+    .benefits {
+      padding: 90px 8%;
+      text-align: center;
+    }
+
+    .section-title {
+      font-size: 42px;
+      margin-bottom: 15px;
+    }
+
+    .section-desc {
+      color: var(--gray);
+      max-width: 650px;
+      margin: 0 auto 50px;
+      font-size: 17px;
+    }
+
+    .benefit-container {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 25px;
+    }
+
+    .benefit {
+      background: var(--light);
+      border-radius: 20px;
+      padding: 40px 25px;
+    }
+
+    .benefit-icon {
+      font-size: 45px;
+      margin-bottom: 15px;
+    }
+
+    .benefit h3 {
+      font-size: 22px;
+      margin-bottom: 10px;
+    }
+
+    .benefit p {
+      color: var(--gray);
+    }
+
+    /* SOCIAL PROOF */
+    .testimonials {
+      background: #f5f5f7;
+      padding: 90px 8%;
+      text-align: center;
+    }
+
+    .testimonial-container {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 25px;
+    }
+
+    .testimonial {
+      background: white;
+      padding: 30px;
+      border-radius: 20px;
+      text-align: left;
+      box-shadow: 0 5px 20px rgba(0,0,0,0.05);
+    }
+
+    .profile {
+      display: flex;
+      align-items: center;
+      gap: 15px;
+      margin-bottom: 15px;
+    }
+
+    .profile img {
+      width: 60px;
+      height: 60px;
+      object-fit: cover;
+      border-radius: 50%;
+    }
+
+    .profile h4 {
+      margin-bottom: 2px;
+    }
+
+    .profile span {
+      color: var(--gray);
+      font-size: 13px;
+    }
+
+    .stars {
+      color: #f5b301;
+      font-size: 20px;
+      margin-bottom: 12px;
+    }
+
+    .testimonial p {
+      color: var(--gray);
+      font-size: 15px;
+    }
+
+    /* FAQ */
+    .faq {
+      padding: 90px 15%;
+    }
+
+    .faq h2 {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+
+    details {
+      border-bottom: 1px solid #ddd;
+      padding: 20px 0;
+    }
+
+    summary {
+      font-size: 18px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    details p {
+      color: var(--gray);
+      margin-top: 15px;
+      padding-right: 30px;
+    }
+
+    /* FINAL CTA */
+    .final-cta {
+      background: var(--dark);
+      color: white;
+      text-align: center;
+      padding: 90px 8%;
+    }
+
+    .final-cta h2 {
+      font-size: 45px;
+      margin-bottom: 15px;
+    }
+
+    .final-cta p {
+      color: #aaa;
+      margin-bottom: 30px;
+      font-size: 18px;
+    }
+
+    .final-cta .cta {
+      background: white;
+      color: var(--primary);
+    }
+
+    /* FOOTER */
+    footer {
+      background: #000;
+      color: white;
+      padding: 40px 8%;
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 25px;
+    }
+
+    footer h3 {
+      margin-bottom: 8px;
+    }
+
+    footer p {
+      color: #999;
+      font-size: 14px;
+    }
+
+    /* RESPONSIVE */
+    @media (max-width: 768px) {
+
+      nav {
+        padding: 0 5%;
+      }
+
+      nav div:last-child {
+        display: none;
+      }
+
+      .hero {
+        flex-direction: column;
+        text-align: center;
+        padding: 60px 5%;
+      }
+
+      .hero h1 {
+        font-size: 45px;
+      }
+
+      .hero p {
+        margin-left: auto;
+        margin-right: auto;
+      }
+
+      .benefit-container,
+      .testimonial-container {
+        grid-template-columns: 1fr;
+      }
+
+      .faq {
+        padding: 70px 7%;
+      }
+
+      .final-cta h2 {
+        font-size: 35px;
+      }
+
+      footer {
+        text-align: center;
+        justify-content: center;
+      }
+    }
+  </style>
+</head>
+
+<body>
+
+  <!-- NAVBAR -->
+  <nav>
+    <div class="logo">iPhone</div>
+
+    <div>
+      <a href="#manfaat">Manfaat</a>
+      <a href="#testimoni">Testimoni</a>
+      <a href="#faq">FAQ</a>
+    </div>
+  </nav>
+
+
+  <!-- HERO SECTION -->
+  <section class="hero">
+
+    <div class="hero-text">
+
+      <div class="small-title">
+        iPhone 17 Pro
+      </div>
+
+      <h1>
+        Lebih dari Sekadar
+        <span>Smartphone.</span>
+      </h1>
+
+      <p>
+        Nikmati pengalaman menggunakan smartphone yang terasa cepat,
+        nyaman, elegan, dan membantu mengabadikan setiap momen penting
+        dalam kehidupanmu.
+      </p>
+
+      <a href="#pesan" class="cta">
+        ✨ Dapatkan Sekarang
+      </a>
+
+    </div>
+
+
+    <div class="hero-phone">
+
+      <div class="phone">
+
+        <div class="camera">
+          <div class="lens one"></div>
+          <div class="lens two"></div>
+          <div class="lens three"></div>
+        </div>
+
+        <div class="phone-screen">
+          iPhone
+        </div>
+
+        <div class="dynamic-island"></div>
+
+      </div>
+
+    </div>
+
+  </section>
+
+
+  <!-- BENEFITS -->
+  <section class="benefits" id="manfaat">
+
+    <h2 class="section-title">
+      Pengalaman yang Berbeda
+    </h2>
+
+    <p class="section-desc">
+      iPhone hadir untuk membuat aktivitas sehari-hari terasa lebih
+      mudah, menyenangkan, dan personal.
+    </p>
+
+
+    <div class="benefit-container">
+
+      <div class="benefit">
+
+        <div class="benefit-icon">📸</div>
+
+        <h3>
+          Abadikan Momen
+        </h3>
+
+        <p>
+          Simpan berbagai momen berharga dan bagikan cerita terbaikmu
+          dengan hasil foto yang memukau.
+        </p>
+
+      </div>
+
+
+      <div class="benefit">
+
+        <div class="benefit-icon">⚡</div>
+
+        <h3>
+          Pengalaman Lancar
+        </h3>
+
+        <p>
+          Nikmati pengalaman menggunakan berbagai aplikasi dan aktivitas
+          sehari-hari dengan respons yang terasa cepat.
+        </p>
+
+      </div>
+
+
+      <div class="benefit">
+
+        <div class="benefit-icon">✨</div>
+
+        <h3>
+          Tampil Elegan
+        </h3>
+
+        <p>
+          Desain premium membuat smartphone tidak hanya menjadi alat
+          komunikasi, tetapi juga bagian dari gaya hidup.
+        </p>
+
+      </div>
+
+    </div>
+
+  </section>
+
+
+  <!-- SOCIAL PROOF -->
+  <section class="testimonials" id="testimoni">
+
+    <h2 class="section-title">
+      Apa Kata Mereka?
+    </h2>
+
+    <p class="section-desc">
+      Pengalaman pengguna setelah menjadikan iPhone sebagai bagian dari
+      aktivitas sehari-hari.
+    </p>
+
+
+    <div class="testimonial-container">
+
+      <!-- TESTIMONI 1 -->
+      <div class="testimonial">
+
+        <div class="profile">
+
+          <img
+            src="https://i.pravatar.cc/150?img=12"
+            alt="Foto profil Raka">
+
+          <div>
+            <h4>Raka Wijaya</h4>
+            <span>Content Creator</span>
+          </div>
+
+        </div>
+
+        <div class="stars">
+          ★★★★★
+        </div>
+
+        <p>
+          “Saya suka banget pengalaman menggunakan iPhone. Foto dan video
+          untuk kebutuhan konten jadi lebih praktis dan hasilnya juga
+          terlihat bagus.”
+        </p>
+
+      </div>
+
+
+      <!-- TESTIMONI 2 -->
+      <div class="testimonial">
+
+        <div class="profile">
+
+          <img
+            src="https://i.pravatar.cc/150?img=32"
+            alt="Foto profil Alya">
+
+          <div>
+            <h4>Alya Putri</h4>
+            <span>Mahasiswa</span>
+          </div>
+
+        </div>
+
+        <div class="stars">
+          ★★★★★
+        </div>
+
+        <p>
+          “Yang paling saya suka adalah tampilannya simpel dan elegan.
+          Dipakai untuk belajar, komunikasi, sampai hiburan semuanya
+          terasa nyaman.”
+        </p>
+
+      </div>
+
+
+      <!-- TESTIMONI 3 -->
+      <div class="testimonial">
+
+        <div class="profile">
+
+          <img
+            src="https://i.pravatar.cc/150?img=68"
+            alt="Foto profil Dimas">
+
+          <div>
+            <h4>Dimas Pratama</h4>
+            <span>Entrepreneur</span>
+          </div>
+
+        </div>
+
+        <div class="stars">
+          ★★★★★
+        </div>
+
+        <p>
+          “Saya menggunakan iPhone untuk pekerjaan dan komunikasi.
+          Pengalamannya simpel dan membantu aktivitas saya sehari-hari.”
+        </p>
+
+      </div>
+
+    </div>
+
+  </section>
+
+
+  <!-- FAQ -->
+  <section class="faq" id="faq">
+
+    <h2 class="section-title">
+      Pertanyaan yang Sering Diajukan
+    </h2>
+
+
+    <details>
+
+      <summary>
+        Apa keunggulan utama iPhone?
+      </summary>
+
+      <p>
+        iPhone menawarkan pengalaman penggunaan yang terintegrasi,
+        desain premium, ekosistem aplikasi, serta berbagai fitur yang
+        dirancang untuk aktivitas sehari-hari.
+      </p>
+
+    </details>
+
+
+    <details>
+
+      <summary>
+        Apakah iPhone cocok untuk kebutuhan sehari-hari?
+      </summary>
+
+      <p>
+        Ya. iPhone dapat digunakan untuk komunikasi, belajar,
+        pekerjaan, fotografi, hiburan, media sosial, dan berbagai
+        aktivitas lainnya.
+      </p>
+
+    </details>
+
+
+    <details>
+
+      <summary>
+        Bagaimana cara mendapatkan iPhone?
+      </summary>
+
+      <p>
+        Klik tombol “Dapatkan Sekarang” pada halaman ini untuk menuju
+        halaman pemesanan atau informasi produk.
+      </p>
+
+    </details>
+
+  </section>
+
+
+  <!-- FINAL CTA -->
+  <section class="final-cta" id="pesan">
+
+    <h2>
+      Saatnya Upgrade Pengalamanmu.
+    </h2>
+
+    <p>
+      Temukan pengalaman smartphone yang lebih personal bersama iPhone.
+    </p>
+
+    <a href="https://www.apple.com/id/shop/buy-iphone" class="cta">
+      🛒 Dapatkan iPhone Sekarang
+    </a>
+
+  </section>
+
+
+  <!-- FOOTER -->
+  <footer>
+
+    <div>
+      <h3>iPhone</h3>
+
+      <p>
+        Experience something extraordinary.
+      </p>
+    </div>
+
+
+    <div>
+      <p>
+        📧 Email: info@contohiphone.id
+      </p>
+
+      <p>
+        📱 WhatsApp: 0812-3456-7890
+      </p>
+    </div>
+
+
+    <div>
+      <p>
+        © 2026 iPhone Landing Page.
+        All Rights Reserved.
+      </p>
+    </div>
+
+  </footer>
+
+</body>
+</html>
