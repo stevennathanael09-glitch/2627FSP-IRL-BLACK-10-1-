@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0"> 
+    <title>Deteksi Umur dan Wajah Real-Time (Mobile Ready)</title>
+    <!-- Memuat face-api.js dari CDN -->
+    <script defer src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/dist/face-api.js"></script>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: #0f172a;
+            color: #f8fafc;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 10px;
+            box-sizing: border-box;
+        }
+
+        h2 {
+            font-size: 1.2rem;
+            text-align: center;
+            margin-bottom: 5px;
+        }
+
+        p#status {
+            color: #38bdf8;
+            margin-bottom: 15px;
+            font-weight: 500;
+            font-size: 0.9rem;
+            text-align: center;
+        }
+
+        .video-container {
+            position: relative;
+            width: 100%;
+            max-width: 400px;
+            aspect-ratio: 3 / 4; /* Rasio potret yang ramah HP */
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+            background-color: #1e293b;
+        }
+
+        video, canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        button {
+            margin-top: 15px;
+            background-color: #0284c7;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            font-size: 1rem;
+            border-radius: 8px;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+        }
+
+        button:active {
+            background-color: #0369a1;
+        }
+    </style>
+</head>
+<body>
+
+    <h2>Deteksi Umur & Wajah via Kamera HP</h2>
+    <p id="status">Memuat model AI, mohon tunggu...</p>
+
+    <div class="video-container">
+        <!-- Elemen untuk menampilkan video dari webcam -->
+        <video id="video" autoplay muted playsinline></video>
+        <!-- Canvas untuk menggambar kotak dan hasil prediksi umur -->
+        <canvas id="overlay"></canvas>
+    </div>
+
+    <!-- Tombol untuk membalik kamera (Depan / Belakang) -->
+    <button id="switchCamera" style="display:none;">Ganti Kamera</button>
+
+    <script>
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('overlay');
+        const statusText = document.getElementById('status');
+        const switchButton = document.getElementById('switchCamera');
+
+        const MODEL_URL = 'https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/model/';
+        
+        // Status awal menggunakan kamera depan ('user')
+        let useFrontCamera = true;
+        let currentStream = null;
+
+        async function loadModels() {
+            try {
+                statusText.innerText = "Mengunduh model AI...";
+                await face-api.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
+                await face-api.nets.faceLandmarkTinyNet.loadFromUri(MODEL_URL);
+                await face-api.nets.ageGenderNet.loadFromUri(MODEL_URL);
+                
+                statusText.innerText = "Model berhasil dimuat! Menyalakan kamera...";
+                startVideo();
+            } catch (error) {
+                statusText.innerText = "Gagal memuat model AI. Periksa koneksi internet.";
+                console.error(error);
+            }
+        }
+
+        function startVideo() {
+            if (currentStream) {
+                currentStream.getTracks().forEach(track => track.stop());
+            }
+
+            const constraints = {
+                video: {
+                    facingMode: useFrontCamera ? 'user' : 'environment',
+                    width: { ideal: 640 },
+                    height: { ideal: 480 }
+                },
+                audio: false
+            };
+
+            navigator.mediaDevices.getUserMedia(constraints)
+                .then((stream) => {
+                    currentStream = stream;
+                    video.srcObject = stream;
+                    switchButton.style.display = 'block'; // Tampilkan tombol ganti kamera setelah aktif
+                })
+                .catch((err) => {
+                    statusText.innerText = "Akses kamera ditolak atau tidak tersedia!";
+                    console.error("Error accessing webcam: ", err);
+                });
+        }
+
+        // Event listener saat tombol ganti kamera diklik
+        switchButton.addEventListener('click', () => {
+            useFrontCamera = !useFrontCamera;
+            startVideo();
+        });
+
+        video.addEventListener('play', () => {
+            statusText.innerText = "Kamera aktif & mendeteksi...";
+            
+            setInterval(async () => {
+                // Pastikan ukuran canvas menyesuaikan ukuran video aktual di HP
+                if (video.videoWidth > 0 && video.videoHeight > 0) {
+                    const displaySize = { width: video.videoWidth, height: video.videoHeight };
+                    
+                    // Hanya set matchDimensions jika ukurannya berubah
+                    if (canvas.width !== video.videoWidth || canvas.height !== video.videoHeight) {
+                        face-api.matchDimensions(canvas, displaySize);
+                    }
+
+                    const detections = await face-api.detectAllFaces(video, new face-api.TinyFaceDetectorOptions())
+                        .withFaceLandmarks(true)
+                        .withAgeAndGender();
+
+                    const resizedDetections = face-api.resizeResults(detections, displaySize);
+                    
+                    const context = canvas.getContext('2d');
+                    context.clearRect(0, 0, canvas.width, canvas.height);
+
+                    resizedDetections.forEach(detection => {
+                        const box = detection.detection.box;
+                        const age = Math.round(detection.age);
+                        const gender = detection.gender;
+                        const probability = Math.round(detection.genderProbability * 100);
+
+                        const text = `${gender === 'male' ? 'Laki' : 'Perempuan'} (${probability}%), ~${age} Thn`;
+                        
+                        const drawBox = new face-api.draw.DrawBox(box, { 
+                            label: text,
+                            boxColor: '#38bdf8',
+                            drawLabelOptions: { backgroundColor: '#0284c7', fontColor: '#ffffff', fontSize: 14 }
+                        });
+                        drawBox.draw(canvas);
+                    });
+                }
+            }, 150); // Interval sedikit dileonkan ke 150ms agar performa HP tidak terlalu berat
+        });
+
+        loadModels();
+    </script>
+</body>
+</html>
