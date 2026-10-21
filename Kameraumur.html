@@ -1,206 +1,48 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport"
-        content="width=device-width, initial-scale=1">
-  <title>Kamera HP & Tablet</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kamera HP & Tablet - Deteksi Umur AI</title>
 
-  <style>
-    * {
-      box-sizing: border-box;
-    }
+<script defer src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/dist/face-api.js"></script>
 
-    body {
-      margin: 0;
-      padding: 20px;
-      min-height: 100vh;
-      background: #0f172a;
-      color: white;
-      font-family: Arial, sans-serif;
-      text-align: center;
-    }
-
-    h2 {
-      font-size: 22px;
-    }
-
-    #status {
-      color: #38bdf8;
-      overflow-wrap: anywhere;
-    }
-
-    .camera-box {
-      position: relative;
-      width: 100%;
-      max-width: 500px;
-      margin: 20px auto;
-      background: #1e293b;
-      border-radius: 14px;
-      overflow: hidden;
-      aspect-ratio: 3 / 4;
-    }
-
-    video {
-      display: block;
-      width: 100%;
-      height: 100%;
-      object-fit: cover;
-    }
-
-    button {
-      border: none;
-      border-radius: 9px;
-      padding: 13px 18px;
-      margin: 5px;
-      font-size: 16px;
-      color: white;
-      background: #0284c7;
-      cursor: pointer;
-    }
-
-    button:disabled {
-      opacity: 0.5;
-    }
-
-    #stop {
-      background: #dc2626;
-    }
-  </style>
+<style>
+*{box-sizing:border-box}
+body{margin:0;padding:18px;background:#0f172a;color:white;font-family:Arial,sans-serif;text-align:center}
+#status{color:#7dd3fc;overflow-wrap:anywhere;line-height:1.5}
+.viewer{position:relative;width:100%;max-width:650px;height:60vh;min-height:250px;max-height:600px;margin:18px auto;background:#000;border-radius:14px;overflow:hidden}
+video,canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
+video{background:#000}
+button,select{margin:5px;padding:12px;border:0;border-radius:8px;font-size:15px}
+button{background:#0284c7;color:white}
+button:disabled,select:disabled{opacity:.5}
+#stop{background:#dc2626}
+select{max-width:100%}
+small{color:#94a3b8;line-height:1.6}
+#hint{max-width:650px;margin:8px auto;color:#fbbf24;min-height:1.4em}
+#result{max-width:650px;margin:12px auto;display:grid;gap:12px;text-align:left}
+.card{background:#1e293b;border-radius:12px;padding:14px;color:#e2e8f0}
+.card h3{margin:0 0 8px;color:#7dd3fc;font-size:16px}
+.big{font-size:34px;font-weight:bold;color:#fff}
+.big small{font-size:15px;font-weight:normal}
+.row{display:flex;justify-content:space-between;gap:10px;padding:4px 0;border-top:1px solid #334155;font-size:14px}
+.row span:first-child{color:#94a3b8}
+.bar{height:8px;background:#334155;border-radius:4px;margin-top:8px;overflow:hidden}
+.bar i{display:block;height:100%;background:#38bdf8;width:0}
+.empty{text-align:center;color:#7dd3fc}
+</style>
 </head>
-
 <body>
-  <h2>Kamera HP & Tablet</h2>
 
-  <p id="status">Tekan Buka Kamera untuk memulai.</p>
+<h2>Kamera HP & Tablet + AI Umur</h2>
+<p id="status">Memuat sistem AI...</p>
 
-  <div class="camera-box">
-    <video id="video"
-           autoplay
-           muted
-           playsinline></video>
-  </div>
+<div class="viewer">
+  <video id="video" autoplay muted playsinline></video>
+  <canvas id="overlay"></canvas>
+</div>
+<div id="hint"></div>
 
-  <button id="start">Buka Kamera</button>
-  <button id="switch" disabled>Ganti Kamera</button>
-  <button id="stop" disabled>Tutup Kamera</button>
-
-  <script>
-    const video = document.getElementById("video");
-    const status = document.getElementById("status");
-    const startBtn = document.getElementById("start");
-    const switchBtn = document.getElementById("switch");
-    const stopBtn = document.getElementById("stop");
-
-    let stream = null;
-    let useFrontCamera = true;
-    let busy = false;
-
-    function showStatus(message) {
-      status.textContent = message;
-    }
-
-    function stopCamera() {
-      if (stream) {
-        stream.getTracks().forEach(track => track.stop());
-        stream = null;
-      }
-
-      video.srcObject = null;
-      switchBtn.disabled = true;
-      stopBtn.disabled = true;
-    }
-
-    async function openCamera() {
-      if (busy) return;
-
-      busy = true;
-      startBtn.disabled = true;
-      switchBtn.disabled = true;
-      showStatus("Meminta izin kamera...");
-
-      try {
-        if (!navigator.mediaDevices?.getUserMedia) {
-          throw new Error(
-            "Kamera tidak didukung. Buka halaman melalui HTTPS " +
-            "dan gunakan browser modern."
-          );
-        }
-
-        stopCamera();
-
-        const newStream =
-          await navigator.mediaDevices.getUserMedia({
-            audio: false,
-            video: {
-              facingMode: {
-                ideal: useFrontCamera ? "user" : "environment"
-              },
-              width: { ideal: 1280 },
-              height: { ideal: 720 }
-            }
-          });
-
-        stream = newStream;
-        video.srcObject = stream;
-
-        await video.play();
-
-        showStatus(
-          "Kamera aktif! Resolusi: " +
-          video.videoWidth + " × " + video.videoHeight
-        );
-
-        switchBtn.disabled = false;
-        stopBtn.disabled = false;
-
-      } catch (error) {
-        stopCamera();
-
-        let message = error.message;
-
-        if (error.name === "NotAllowedError") {
-          message =
-            "Izin kamera ditolak. Izinkan kamera di pengaturan " +
-            "situs/browser, lalu coba lagi.";
-        } else if (error.name === "NotFoundError") {
-          message = "Kamera tidak ditemukan pada perangkat.";
-        } else if (error.name === "NotReadableError") {
-          message =
-            "Kamera sedang digunakan aplikasi lain atau tidak " +
-            "dapat diakses. Tutup aplikasi kamera lain.";
-        } else if (error.name === "OverconstrainedError") {
-          message =
-            "Pengaturan kamera tidak didukung. Coba perangkat lain.";
-        } else if (error.name === "SecurityError") {
-          message =
-            "Akses kamera diblokir oleh keamanan browser. " +
-            "Gunakan HTTPS.";
-        }
-
-        showStatus("Gagal membuka kamera: " + message);
-        console.error("Camera error:", error);
-
-      } finally {
-        busy = false;
-        startBtn.disabled = false;
-      }
-    }
-
-    startBtn.addEventListener("click", openCamera);
-
-    switchBtn.addEventListener("click", async () => {
-      useFrontCamera = !useFrontCamera;
-      await openCamera();
-    });
-
-    stopBtn.addEventListener("click", () => {
-      stopCamera();
-      showStatus("Kamera sudah ditutup.");
-    });
-
-    // Bersihkan kamera jika halaman ditinggalkan.
-    window.addEventListener("pagehide", stopCamera);
-  </script>
-</body>
-</html>
+<button id="start">Aktifkan Kamera</button>
+<button id="flip" disabled>Ganti
