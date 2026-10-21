@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport"
+        content="width=device-width, initial-scale=1">
+  <title>Kamera HP & Tablet</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 20px;
+      min-height: 100vh;
+      background: #0f172a;
+      color: white;
+      font-family: Arial, sans-serif;
+      text-align: center;
+    }
+
+    h2 {
+      font-size: 22px;
+    }
+
+    #status {
+      color: #38bdf8;
+      overflow-wrap: anywhere;
+    }
+
+    .camera-box {
+      position: relative;
+      width: 100%;
+      max-width: 500px;
+      margin: 20px auto;
+      background: #1e293b;
+      border-radius: 14px;
+      overflow: hidden;
+      aspect-ratio: 3 / 4;
+    }
+
+    video {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+    }
+
+    button {
+      border: none;
+      border-radius: 9px;
+      padding: 13px 18px;
+      margin: 5px;
+      font-size: 16px;
+      color: white;
+      background: #0284c7;
+      cursor: pointer;
+    }
+
+    button:disabled {
+      opacity: 0.5;
+    }
+
+    #stop {
+      background: #dc2626;
+    }
+  </style>
+</head>
+
+<body>
+  <h2>Kamera HP & Tablet</h2>
+
+  <p id="status">Tekan Buka Kamera untuk memulai.</p>
+
+  <div class="camera-box">
+    <video id="video"
+           autoplay
+           muted
+           playsinline></video>
+  </div>
+
+  <button id="start">Buka Kamera</button>
+  <button id="switch" disabled>Ganti Kamera</button>
+  <button id="stop" disabled>Tutup Kamera</button>
+
+  <script>
+    const video = document.getElementById("video");
+    const status = document.getElementById("status");
+    const startBtn = document.getElementById("start");
+    const switchBtn = document.getElementById("switch");
+    const stopBtn = document.getElementById("stop");
+
+    let stream = null;
+    let useFrontCamera = true;
+    let busy = false;
+
+    function showStatus(message) {
+      status.textContent = message;
+    }
+
+    function stopCamera() {
+      if (stream) {
+        stream.getTracks().forEach(track => track.stop());
+        stream = null;
+      }
+
+      video.srcObject = null;
+      switchBtn.disabled = true;
+      stopBtn.disabled = true;
+    }
+
+    async function openCamera() {
+      if (busy) return;
+
+      busy = true;
+      startBtn.disabled = true;
+      switchBtn.disabled = true;
+      showStatus("Meminta izin kamera...");
+
+      try {
+        if (!navigator.mediaDevices?.getUserMedia) {
+          throw new Error(
+            "Kamera tidak didukung. Buka halaman melalui HTTPS " +
+            "dan gunakan browser modern."
+          );
+        }
+
+        stopCamera();
+
+        const newStream =
+          await navigator.mediaDevices.getUserMedia({
+            audio: false,
+            video: {
+              facingMode: {
+                ideal: useFrontCamera ? "user" : "environment"
+              },
+              width: { ideal: 1280 },
+              height: { ideal: 720 }
+            }
+          });
+
+        stream = newStream;
+        video.srcObject = stream;
+
+        await video.play();
+
+        showStatus(
+          "Kamera aktif! Resolusi: " +
+          video.videoWidth + " × " + video.videoHeight
+        );
+
+        switchBtn.disabled = false;
+        stopBtn.disabled = false;
+
+      } catch (error) {
+        stopCamera();
+
+        let message = error.message;
+
+        if (error.name === "NotAllowedError") {
+          message =
+            "Izin kamera ditolak. Izinkan kamera di pengaturan " +
+            "situs/browser, lalu coba lagi.";
+        } else if (error.name === "NotFoundError") {
+          message = "Kamera tidak ditemukan pada perangkat.";
+        } else if (error.name === "NotReadableError") {
+          message =
+            "Kamera sedang digunakan aplikasi lain atau tidak " +
+            "dapat diakses. Tutup aplikasi kamera lain.";
+        } else if (error.name === "OverconstrainedError") {
+          message =
+            "Pengaturan kamera tidak didukung. Coba perangkat lain.";
+        } else if (error.name === "SecurityError") {
+          message =
+            "Akses kamera diblokir oleh keamanan browser. " +
+            "Gunakan HTTPS.";
+        }
+
+        showStatus("Gagal membuka kamera: " + message);
+        console.error("Camera error:", error);
+
+      } finally {
+        busy = false;
+        startBtn.disabled = false;
+      }
+    }
+
+    startBtn.addEventListener("click", openCamera);
+
+    switchBtn.addEventListener("click", async () => {
+      useFrontCamera = !useFrontCamera;
+      await openCamera();
+    });
+
+    stopBtn.addEventListener("click", () => {
+      stopCamera();
+      showStatus("Kamera sudah ditutup.");
+    });
+
+    // Bersihkan kamera jika halaman ditinggalkan.
+    window.addEventListener("pagehide", stopCamera);
+  </script>
+</body>
+</html>
