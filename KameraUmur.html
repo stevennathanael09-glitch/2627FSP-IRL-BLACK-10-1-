@@ -38,17 +38,17 @@
       background: #000;
     }
 
-    video, canvas {
+    video {
       display: block;
       width: 100%;
+      height: auto;
     }
-
-    video { height: auto; }
 
     canvas {
       position: absolute;
       left: 0;
       top: 0;
+      width: 100%;
       height: 100%;
       pointer-events: none;
     }
@@ -72,19 +72,26 @@
       padding: 15px;
       background: #243247;
       border-radius: 12px;
-      font-size: 19px;
+      font-size: 17px;
+      line-height: 1.7;
     }
 
     .small {
       font-size: 13px;
       color: #cbd5e1;
     }
+
+    .age {
+      font-size: 30px;
+      font-weight: bold;
+      color: #4ade80;
+    }
   </style>
 </head>
 
 <body>
   <h1>📸 Kamera AI Prediksi Umur</h1>
-  <p>Arahkan kamera ke wajah, lalu tunggu AI menganalisis.</p>
+  <p>Arahkan kamera ke wajah untuk melihat hasil perkiraan.</p>
 
   <div id="status">Memuat sistem AI...</div>
 
@@ -97,11 +104,12 @@
   <button id="stopBtn">Matikan Kamera</button>
 
   <div id="result">
-    Hasil prediksi umur akan muncul di sini.
+    Hasil prediksi akan muncul di sini.
   </div>
 
   <p class="small">
-    Prediksi AI hanya perkiraan, bukan umur asli.
+    Umur adalah perkiraan AI. Status menikah merupakan tebakan
+    acak untuk hiburan, bukan hasil deteksi wajah.
   </p>
 
   <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
@@ -122,15 +130,16 @@
     let cameraStream = null;
     let detecting = false;
     let busy = false;
-    let lastFaceCount = -1;
+
+    // Penyimpanan hasil agar umur tidak berubah setiap frame.
+    let ageSamples = [];
+    let fixedAge = null;
+    let fixedMarriageGuess = null;
+    let missingFrames = 0;
 
     async function loadModels() {
       try {
         statusBox.textContent = "Sedang mengunduh model AI...";
-
-        if (!window.faceapi) {
-          throw new Error("Library AI gagal dimuat. Periksa internet.");
-        }
 
         await Promise.all([
           faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
@@ -139,24 +148,21 @@
         ]);
 
         modelsReady = true;
-        statusBox.textContent =
-          "AI siap! Tekan Aktifkan Kamera.";
+        statusBox.textContent = "AI siap! Tekan Aktifkan Kamera.";
         startBtn.disabled = false;
       } catch (err) {
         console.error(err);
         statusBox.textContent =
-          "Model AI gagal dimuat. Periksa koneksi internet atau URL model.";
+          "Model AI gagal dimuat. Periksa koneksi internet.";
       }
     }
 
     async function startCamera() {
       if (!modelsReady) return;
 
+      stopCamera();
+
       try {
-        stopCamera();
-
-        statusBox.textContent = "Meminta izin kamera...";
-
         cameraStream = await navigator.mediaDevices.getUserMedia({
           audio: false,
           video: {
@@ -172,9 +178,9 @@
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
 
+        resetPrediction();
         detecting = true;
-        statusBox.textContent =
-          "Kamera aktif. Mencari wajah...";
+        statusBox.textContent = "Kamera aktif. Mencari wajah...";
         detectLoop();
 
       } catch (err) {
@@ -182,6 +188,13 @@
         statusBox.textContent =
           "Kamera gagal dibuka. Izinkan akses kamera di browser.";
       }
+    }
+
+    function resetPrediction() {
+      ageSamples = [];
+      fixedAge = null;
+      fixedMarriageGuess = null;
+      missingFrames = 0;
     }
 
     function stopCamera() {
@@ -194,6 +207,8 @@
 
       video.srcObject = null;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
+      resetPrediction();
+
       resultBox.textContent = "Kamera dimatikan.";
       statusBox.textContent = modelsReady
         ? "AI siap digunakan."
@@ -208,9 +223,18 @@
       return "Lansia";
     }
 
+    // Mengambil nilai tengah agar hasil lebih stabil.
+    function median(values) {
+      const sorted = [...values].sort((a, b) => a - b);
+      const mid = Math.floor(sorted.length / 2);
+
+      return sorted.length % 2
+        ? sorted[mid]
+        : (sorted[mid - 1] + sorted[mid]) / 2;
+    }
+
     async function detectLoop() {
       if (!detecting || busy) return;
-
       busy = true;
 
       try {
@@ -238,50 +262,82 @@
           faceapi.draw.drawDetections(canvas, resized);
 
           if (detections.length === 0) {
+            missingFrames++;
+
             statusBox.textContent =
               "Wajah belum terdeteksi. Hadap kamera dan tambah pencahayaan.";
-            resultBox.textContent = "Belum ada wajah terdeteksi.";
+
+            if (missingFrames > 5) {
+              resetPrediction();
+              resultBox.textContent = "Belum ada wajah terdeteksi.";
+            }
           } else {
-            statusBox.textContent =
-              "Berhasil mendeteksi " + detections.length + " wajah.";
+            missingFrames = 0;
 
-            resultBox.innerHTML = "";
+            // Mode utama: satu wajah di depan kamera.
+            // Untuk banyak wajah, tiap wajah belum memiliki
+            // pelacakan identitas yang terpisah.
+            const face = detections[0];
 
-            detections.forEach((face, index) => {
-              const age = Math.round(face.age);
-              const confidence =
-                Math.round(face.detection.score * 100);
+            if (fixedAge === null) {
+              ageSamples.push(face.age);
 
-              const line = document.createElement("p");
-              line.textContent =
-                "Wajah " + (index + 1) +
-                ": perkiraan " + age + " tahun (" +
-                ageGroup(age) + ")" +
-                " — deteksi wajah " + confidence + "%";
+              statusBox.textContent =
+                "Menganalisis umur... " +
+                Math.min(ageSamples.length, 7) + "/7";
 
-              resultBox.appendChild(line);
+              if (ageSamples.length >= 7) {
+                fixedAge = Math.max(
+                  1,
+                  Math.min(100, Math.round(median(ageSamples)))
+                );
+
+                // Label acak, bukan inferensi dari wajah.
+                fixedMarriageGuess = Math.random() < 0.5
+                  ? "Kemungkinan sudah menikah"
+                  : "Kemungkinan belum menikah";
+              }
+            }
+
+            if (fixedAge !== null) {
+              statusBox.textContent = "Wajah terdeteksi!";
+
+              resultBox.replaceChildren();
+
+              const ageTitle = document.createElement("div");
+              ageTitle.className = "age";
+              ageTitle.textContent = fixedAge + " tahun";
+
+              const group = document.createElement("div");
+              group.textContent = "Kategori: " + ageGroup(fixedAge);
+
+              const marriage = document.createElement("div");
+              marriage.textContent = "Status: " + fixedMarriageGuess;
+
+              const note = document.createElement("p");
+              note.className = "small";
+              note.textContent =
+                "Status menikah dipilih secara acak untuk hiburan.";
+
+              resultBox.append(ageTitle, group, marriage, note);
 
               const box = face.detection.box;
-              const label =
-                age + " tahun | " + ageGroup(age);
+              const label = fixedAge + " tahun";
 
               ctx.font = "bold 17px Arial";
-              ctx.fillStyle = "#22c55e";
-              ctx.fillRect(
-                box.x,
-                Math.max(0, box.y - 28),
-                Math.min(ctx.measureText(label).width + 12,
-                  canvas.width - box.x),
-                26
+              const labelWidth = ctx.measureText(label).width + 12;
+              const labelX = Math.max(
+                0,
+                Math.min(box.x, canvas.width - labelWidth)
               );
+              const labelY = Math.max(0, box.y - 28);
+
+              ctx.fillStyle = "#22c55e";
+              ctx.fillRect(labelX, labelY, labelWidth, 26);
 
               ctx.fillStyle = "#07130b";
-              ctx.fillText(
-                label,
-                box.x + 5,
-                Math.max(18, box.y - 9)
-              );
-            });
+              ctx.fillText(label, labelX + 6, labelY + 18);
+            }
           }
         }
       } catch (err) {
@@ -290,6 +346,7 @@
           "AI mengalami kendala. Periksa koneksi dan model.";
       } finally {
         busy = false;
+
         if (detecting) {
           setTimeout(detectLoop, 350);
         }
@@ -304,7 +361,7 @@
       loadModels();
     } else {
       statusBox.textContent =
-        "Browser tidak mendukung akses kamera. Gunakan HTTPS.";
+        "Browser tidak mendukung kamera. Gunakan HTTPS.";
     }
   </script>
 </body>
