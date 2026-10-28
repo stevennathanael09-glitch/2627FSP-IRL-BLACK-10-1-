@@ -1,359 +1,311 @@
+
 <!DOCTYPE html>
 <html lang="id">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Kamera HP & Tablet - Deteksi Umur AI</title>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Kamera AI Prediksi Umur</title>
 
-<!-- TAMBAHAN: Library AI untuk deteksi wajah dan umur -->
-<script defer src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/dist/face-api.js"></script>
+  <style>
+    * { box-sizing: border-box; }
 
-<style>
-*{box-sizing:border-box}
-body{
-  margin:0;padding:18px;background:#0f172a;color:white;
-  font-family:Arial,sans-serif;text-align:center
-}
-#status{color:#7dd3fc;overflow-wrap:anywhere;line-height:1.5}
-.viewer{
-  position:relative;
-  width:100%;max-width:650px;height:60vh;min-height:250px;
-  max-height:600px;margin:18px auto;background:#000;
-  border-radius:14px;overflow:hidden
-}
-video,canvas{
-  position:absolute;inset:0;width:100%;height:100%;
-  object-fit:contain
-}
-video{background:#000}
-button,select{
-  margin:5px;padding:12px;border:0;border-radius:8px;font-size:15px
-}
-button{background:#0284c7;color:white}
-button:disabled,select:disabled{opacity:.5}
-#stop{background:#dc2626}
-select{max-width:100%}
-small{color:#94a3b8;line-height:1.6}
-#result{
-  max-width:650px;margin:12px auto;padding:14px;
-  border-radius:10px;background:#1e293b;
-  color:#7dd3fc;white-space:pre-line
-}
-</style>
+    body {
+      margin: 0;
+      padding: 20px;
+      background: #101827;
+      color: white;
+      font-family: Arial, sans-serif;
+      text-align: center;
+    }
+
+    h1 { font-size: 25px; }
+
+    #status {
+      padding: 12px;
+      margin: 15px auto;
+      background: #243247;
+      border-radius: 10px;
+      max-width: 500px;
+    }
+
+    #cameraBox {
+      position: relative;
+      width: 100%;
+      max-width: 640px;
+      margin: 15px auto;
+      overflow: hidden;
+      border-radius: 14px;
+      background: #000;
+    }
+
+    video, canvas {
+      display: block;
+      width: 100%;
+    }
+
+    video { height: auto; }
+
+    canvas {
+      position: absolute;
+      left: 0;
+      top: 0;
+      height: 100%;
+      pointer-events: none;
+    }
+
+    button {
+      padding: 13px 18px;
+      margin: 6px;
+      border: 0;
+      border-radius: 9px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+    }
+
+    #startBtn { background: #22c55e; color: #07130b; }
+    #stopBtn { background: #ef4444; color: white; }
+
+    #result {
+      max-width: 500px;
+      margin: 15px auto;
+      padding: 15px;
+      background: #243247;
+      border-radius: 12px;
+      font-size: 19px;
+    }
+
+    .small {
+      font-size: 13px;
+      color: #cbd5e1;
+    }
+  </style>
 </head>
+
 <body>
+  <h1>📸 Kamera AI Prediksi Umur</h1>
+  <p>Arahkan kamera ke wajah, lalu tunggu AI menganalisis.</p>
 
-<h2>Kamera HP & Tablet + AI Umur</h2>
-<p id="status">Memuat sistem AI...</p>
+  <div id="status">Memuat sistem AI...</div>
 
-<div class="viewer">
-  <video id="video" autoplay muted playsinline></video>
-  <canvas id="overlay"></canvas>
-</div>
+  <div id="cameraBox">
+    <video id="video" autoplay playsinline muted></video>
+    <canvas id="overlay"></canvas>
+  </div>
 
-<button id="start">Aktifkan Kamera</button>
-<button id="flip" disabled>Ganti Kamera</button>
-<button id="stop" disabled>Tutup</button>
+  <button id="startBtn" disabled>Aktifkan Kamera</button>
+  <button id="stopBtn">Matikan Kamera</button>
 
-<p>Pilih kamera:</p>
-<select id="devices" disabled>
-  <option value="">Kamera otomatis</option>
-</select>
+  <div id="result">
+    Hasil prediksi umur akan muncul di sini.
+  </div>
 
-<div id="result">Hasil prediksi umur akan muncul di sini.</div>
+  <p class="small">
+    Prediksi AI hanya perkiraan, bukan umur asli.
+  </p>
 
-<p><small>
-Gunakan HTTPS atau localhost dan izinkan akses kamera.
-Prediksi umur AI hanyalah perkiraan.
-</small></p>
+  <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
 
-<script>
-const video = document.querySelector("#video");
-const status = document.querySelector("#status");
-const startBtn = document.querySelector("#start");
-const flipBtn = document.querySelector("#flip");
-const stopBtn = document.querySelector("#stop");
-const devices = document.querySelector("#devices");
-const canvas = document.querySelector("#overlay");
-const result = document.querySelector("#result");
+  <script>
+    const video = document.getElementById("video");
+    const canvas = document.getElementById("overlay");
+    const ctx = canvas.getContext("2d");
+    const statusBox = document.getElementById("status");
+    const resultBox = document.getElementById("result");
+    const startBtn = document.getElementById("startBtn");
+    const stopBtn = document.getElementById("stopBtn");
 
-let stream = null;
-let facing = "environment";
-let busy = false;
+    const MODEL_URL =
+      "https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js@master/weights";
 
-// TAMBAHAN AI
-const MODEL_URL =
-  "https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/model/";
+    let modelsReady = false;
+    let cameraStream = null;
+    let detecting = false;
+    let busy = false;
+    let lastFaceCount = -1;
 
-let modelsReady = false;
-let detecting = false;
-let detectionTimer = null;
-let lastResults = [];
-let lastDetectionTime = 0;
+    async function loadModels() {
+      try {
+        statusBox.textContent = "Sedang mengunduh model AI...";
 
-async function loadAI() {
-  try {
-    status.textContent = "Mengunduh model AI...";
-    await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
-    await faceapi.nets.ageGenderNet.loadFromUri(MODEL_URL);
-    modelsReady = true;
-    status.textContent = "AI siap. Aktifkan kamera.";
-  } catch (e) {
-    status.textContent =
-      "Model AI gagal dimuat. Periksa internet lalu muat ulang halaman.";
-    console.error("AI model error:", e);
-  }
-}
+        if (!window.faceapi) {
+          throw new Error("Library AI gagal dimuat. Periksa internet.");
+        }
 
-// PEMBUKA KAMERA: DIPERTAHANKAN SAMA SEPERTI SEBELUMNYA
-function stopCamera() {
-  if (stream) {
-    stream.getTracks().forEach(track => track.stop());
-    stream = null;
-  }
-  video.srcObject = null;
-  flipBtn.disabled = true;
-  stopBtn.disabled = true;
-}
+        await Promise.all([
+          faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+          faceapi.nets.faceLandmark68TinyNet.loadFromUri(MODEL_URL),
+          faceapi.nets.ageGenderNet.loadFromUri(MODEL_URL)
+        ]);
 
-async function listCameras() {
-  try {
-    const all = await navigator.mediaDevices.enumerateDevices();
-    const cams = all.filter(d => d.kind === "videoinput");
-    const selected = devices.value;
-
-    devices.replaceChildren(new Option("Kamera otomatis", ""));
-
-    cams.forEach((cam, i) => {
-      devices.add(new Option(cam.label || `Kamera ${i + 1}`, cam.deviceId));
-    });
-
-    if (cams.some(c => c.deviceId === selected)) {
-      devices.value = selected;
+        modelsReady = true;
+        statusBox.textContent =
+          "AI siap! Tekan Aktifkan Kamera.";
+        startBtn.disabled = false;
+      } catch (err) {
+        console.error(err);
+        statusBox.textContent =
+          "Model AI gagal dimuat. Periksa koneksi internet atau URL model.";
+      }
     }
 
-    devices.disabled = cams.length === 0;
-  } catch (e) {
-    console.warn(e);
-  }
-}
+    async function startCamera() {
+      if (!modelsReady) return;
 
-async function openCamera() {
-  if (busy) return;
+      try {
+        stopCamera();
 
-  if (!navigator.mediaDevices?.getUserMedia) {
-    status.textContent =
-      "Akses kamera tidak tersedia. Buka halaman HTTPS di Chrome atau Safari, bukan pratinjau editor.";
-    return;
-  }
+        statusBox.textContent = "Meminta izin kamera...";
 
-  busy = true;
-  startBtn.disabled = true;
-  status.textContent = "Menghubungkan kamera...";
-
-  try {
-    stopCamera();
-
-    const id = devices.value;
-    const constraints = {
-      audio: false,
-      video: id
-        ? { deviceId: { exact: id } }
-        : {
-            facingMode: { ideal: facing },
-            width: { ideal: 1280 },
-            height: { ideal: 720 }
+        cameraStream = await navigator.mediaDevices.getUserMedia({
+          audio: false,
+          video: {
+            facingMode: "user",
+            width: { ideal: 640 },
+            height: { ideal: 480 }
           }
-    };
+        });
 
-    try {
-      stream = await navigator.mediaDevices.getUserMedia(constraints);
-    } catch (firstError) {
-      if (id) throw firstError;
+        video.srcObject = cameraStream;
+        await video.play();
 
-      stream = await navigator.mediaDevices.getUserMedia({
-        audio: false,
-        video: true
-      });
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+
+        detecting = true;
+        statusBox.textContent =
+          "Kamera aktif. Mencari wajah...";
+        detectLoop();
+
+      } catch (err) {
+        console.error(err);
+        statusBox.textContent =
+          "Kamera gagal dibuka. Izinkan akses kamera di browser.";
+      }
     }
 
-    video.srcObject = stream;
-    await video.play();
+    function stopCamera() {
+      detecting = false;
 
-    status.textContent = modelsReady
-      ? "Kamera aktif. Mendeteksi wajah..."
-      : "Kamera aktif. Menunggu model AI...";
-
-    flipBtn.disabled = false;
-    stopBtn.disabled = false;
-
-    await listCameras();
-
-    // TAMBAHAN: mulai deteksi setelah kamera aktif
-    startDetection();
-
-  } catch (e) {
-    stopCamera();
-
-    const errors = {
-      NotAllowedError: "Izin kamera ditolak. Izinkan kamera pada pengaturan situs.",
-      NotFoundError: "Kamera tidak ditemukan pada perangkat.",
-      NotReadableError: "Kamera sedang dipakai aplikasi lain atau tidak bisa dibuka.",
-      OverconstrainedError: "Kamera yang dipilih tidak mendukung pengaturan ini.",
-      SecurityError: "Browser memblokir kamera. Gunakan HTTPS."
-    };
-
-    status.textContent =
-      "Gagal membuka kamera: " +
-      (errors[e.name] || e.message || "Kesalahan tidak diketahui.");
-
-    console.error("Camera error:", e);
-
-  } finally {
-    busy = false;
-    startBtn.disabled = false;
-  }
-}
-
-// TAMBAHAN AI: DETEKSI UMUR REAL-TIME
-function startDetection() {
-  stopDetection();
-
-  if (!modelsReady) {
-    result.textContent =
-      "Kamera aktif. Model AI belum siap; tunggu sampai selesai dimuat.";
-    return;
-  }
-
-  detecting = true;
-  result.textContent = "Sedang mencari wajah...";
-
-  detectionTimer = setInterval(async () => {
-    if (
-      !detecting ||
-      !modelsReady ||
-      video.readyState < 2 ||
-      video.videoWidth === 0 ||
-      video.videoHeight === 0
-    ) return;
-
-    // Jangan menjalankan inferensi bersamaan.
-    if (lastDetectionTime === -1) return;
-    lastDetectionTime = -1;
-
-    try {
-      const options = new faceapi.TinyFaceDetectorOptions({
-        inputSize: 320,
-        scoreThreshold: 0.5
-      });
-
-      const detections = await faceapi
-        .detectAllFaces(video, options)
-        .withAgeAndGender();
-
-      if (!detecting) return;
-
-      const width = video.videoWidth;
-      const height = video.videoHeight;
-
-      if (canvas.width !== width || canvas.height !== height) {
-        canvas.width = width;
-        canvas.height = height;
+      if (cameraStream) {
+        cameraStream.getTracks().forEach(track => track.stop());
+        cameraStream = null;
       }
 
-      const ctx = canvas.getContext("2d");
-      ctx.clearRect(0, 0, width, height);
-
-      if (detections.length === 0) {
-        result.textContent =
-          "Belum ada wajah terdeteksi. Hadapkan wajah ke kamera dengan pencahayaan cukup.";
-        return;
-      }
-
-      const lines = [];
-
-      for (const item of detections) {
-        const box = item.detection.box;
-        const age = Math.round(item.age);
-
-        // Gambar kotak wajah dan label perkiraan umur.
-        ctx.strokeStyle = "#38bdf8";
-        ctx.lineWidth = Math.max(2, width / 320);
-        ctx.strokeRect(box.x, box.y, box.width, box.height);
-
-        const label = `Perkiraan umur: ${age} tahun`;
-        ctx.font = `bold ${Math.max(14, width / 38)}px Arial`;
-
-        const fontSize = Math.max(14, width / 38);
-        const labelWidth = ctx.measureText(label).width;
-        const labelHeight = fontSize + 12;
-        const labelX = Math.max(0, box.x);
-        const labelY = Math.max(labelHeight, box.y);
-
-        ctx.fillStyle = "#0284c7";
-        ctx.fillRect(
-          labelX,
-          labelY - labelHeight,
-          labelWidth + 12,
-          labelHeight
-        );
-
-        ctx.fillStyle = "#ffffff";
-        ctx.fillText(label, labelX + 6, labelY - 7);
-
-        lines.push(`Wajah ${lines.length + 1}: sekitar ${age} tahun`);
-      }
-
-      result.textContent =
-        lines.join("\n") +
-        "\n\nCatatan: hasil AI bisa meleset dan bukan umur pasti.";
-    } catch (e) {
-      console.error("Detection error:", e);
-      result.textContent =
-        "Deteksi gagal. Coba pencahayaan lebih terang atau gunakan kamera lain.";
-    } finally {
-      if (lastDetectionTime === -1) lastDetectionTime = 0;
+      video.srcObject = null;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      resultBox.textContent = "Kamera dimatikan.";
+      statusBox.textContent = modelsReady
+        ? "AI siap digunakan."
+        : "Memuat model AI...";
     }
-  }, 700);
-}
 
-function stopDetection() {
-  detecting = false;
+    function ageGroup(age) {
+      if (age < 13) return "Anak-anak";
+      if (age < 20) return "Remaja";
+      if (age < 40) return "Dewasa muda";
+      if (age < 60) return "Dewasa";
+      return "Lansia";
+    }
 
-  if (detectionTimer !== null) {
-    clearInterval(detectionTimer);
-    detectionTimer = null;
-  }
+    async function detectLoop() {
+      if (!detecting || busy) return;
 
-  const ctx = canvas.getContext("2d");
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  lastDetectionTime = 0;
-}
+      busy = true;
 
-startBtn.addEventListener("click", openCamera);
+      try {
+        if (video.readyState >= 2) {
+          const detections = await faceapi
+            .detectAllFaces(
+              video,
+              new faceapi.TinyFaceDetectorOptions({
+                inputSize: 320,
+                scoreThreshold: 0.35
+              })
+            )
+            .withFaceLandmarks(true)
+            .withAgeAndGender();
 
-flipBtn.addEventListener("click", async () => {
-  facing = facing === "user" ? "environment" : "user";
-  devices.value = "";
-  await openCamera();
-});
+          if (!detecting) return;
 
-devices.addEventListener("change", openCamera);
+          ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-stopBtn.addEventListener("click", () => {
-  stopDetection();
-  stopCamera();
-  result.textContent = "Kamera ditutup.";
-  status.textContent = "Kamera ditutup.";
-});
+          const resized = faceapi.resizeResults(detections, {
+            width: canvas.width,
+            height: canvas.height
+          });
 
-window.addEventListener("pagehide", () => {
-  stopDetection();
-  stopCamera();
-});
+          faceapi.draw.drawDetections(canvas, resized);
 
-// Muat model AI saat halaman dibuka.
-loadAI();
-</script>
+          if (detections.length === 0) {
+            statusBox.textContent =
+              "Wajah belum terdeteksi. Hadap kamera dan tambah pencahayaan.";
+            resultBox.textContent = "Belum ada wajah terdeteksi.";
+          } else {
+            statusBox.textContent =
+              "Berhasil mendeteksi " + detections.length + " wajah.";
+
+            resultBox.innerHTML = "";
+
+            detections.forEach((face, index) => {
+              const age = Math.round(face.age);
+              const confidence =
+                Math.round(face.detection.score * 100);
+
+              const line = document.createElement("p");
+              line.textContent =
+                "Wajah " + (index + 1) +
+                ": perkiraan " + age + " tahun (" +
+                ageGroup(age) + ")" +
+                " — deteksi wajah " + confidence + "%";
+
+              resultBox.appendChild(line);
+
+              const box = face.detection.box;
+              const label =
+                age + " tahun | " + ageGroup(age);
+
+              ctx.font = "bold 17px Arial";
+              ctx.fillStyle = "#22c55e";
+              ctx.fillRect(
+                box.x,
+                Math.max(0, box.y - 28),
+                Math.min(ctx.measureText(label).width + 12,
+                  canvas.width - box.x),
+                26
+              );
+
+              ctx.fillStyle = "#07130b";
+              ctx.fillText(
+                label,
+                box.x + 5,
+                Math.max(18, box.y - 9)
+              );
+            });
+          }
+        }
+      } catch (err) {
+        console.error(err);
+        statusBox.textContent =
+          "AI mengalami kendala. Periksa koneksi dan model.";
+      } finally {
+        busy = false;
+        if (detecting) {
+          setTimeout(detectLoop, 350);
+        }
+      }
+    }
+
+    startBtn.addEventListener("click", startCamera);
+    stopBtn.addEventListener("click", stopCamera);
+
+    if (navigator.mediaDevices &&
+        navigator.mediaDevices.getUserMedia) {
+      loadModels();
+    } else {
+      statusBox.textContent =
+        "Browser tidak mendukung akses kamera. Gunakan HTTPS.";
+    }
+  </script>
 </body>
 </html>
