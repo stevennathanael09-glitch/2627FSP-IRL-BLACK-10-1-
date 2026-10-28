@@ -1,48 +1,965 @@
+
 <!DOCTYPE html>
 <html lang="id">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Kamera HP & Tablet - Deteksi Umur AI</title>
-
-<script defer src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api@1.7.12/dist/face-api.js"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>NEO VISION | Face & Future AI</title>
 
 <style>
-*{box-sizing:border-box}
-body{margin:0;padding:18px;background:#0f172a;color:white;font-family:Arial,sans-serif;text-align:center}
-#status{color:#7dd3fc;overflow-wrap:anywhere;line-height:1.5}
-.viewer{position:relative;width:100%;max-width:650px;height:60vh;min-height:250px;max-height:600px;margin:18px auto;background:#000;border-radius:14px;overflow:hidden}
-video,canvas{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
-video{background:#000}
-button,select{margin:5px;padding:12px;border:0;border-radius:8px;font-size:15px}
-button{background:#0284c7;color:white}
-button:disabled,select:disabled{opacity:.5}
-#stop{background:#dc2626}
-select{max-width:100%}
-small{color:#94a3b8;line-height:1.6}
-#hint{max-width:650px;margin:8px auto;color:#fbbf24;min-height:1.4em}
-#result{max-width:650px;margin:12px auto;display:grid;gap:12px;text-align:left}
-.card{background:#1e293b;border-radius:12px;padding:14px;color:#e2e8f0}
-.card h3{margin:0 0 8px;color:#7dd3fc;font-size:16px}
-.big{font-size:34px;font-weight:bold;color:#fff}
-.big small{font-size:15px;font-weight:normal}
-.row{display:flex;justify-content:space-between;gap:10px;padding:4px 0;border-top:1px solid #334155;font-size:14px}
-.row span:first-child{color:#94a3b8}
-.bar{height:8px;background:#334155;border-radius:4px;margin-top:8px;overflow:hidden}
-.bar i{display:block;height:100%;background:#38bdf8;width:0}
-.empty{text-align:center;color:#7dd3fc}
+:root {
+  --bg: #080b18;
+  --panel: #121a30;
+  --cyan: #39e7ff;
+  --purple: #b388ff;
+  --green: #61ffb1;
+  --gold: #ffd66b;
+  --text: #f4f7ff;
+  --muted: #9ba9c8;
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  padding: 18px;
+  background:
+    radial-gradient(ellipse at top, #18284d 0%, transparent 60%),
+    var(--bg);
+  color: var(--text);
+  font-family: Arial, sans-serif;
+}
+
+header {
+  text-align: center;
+  padding: 24px 8px;
+}
+
+.logo {
+  font-size: 13px;
+  letter-spacing: 5px;
+  color: var(--cyan);
+}
+
+h1 {
+  font-size: clamp(27px, 6vw, 46px);
+  margin: 12px 0;
+  background: linear-gradient(90deg, var(--cyan), var(--purple));
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+}
+
+.subtitle {
+  color: var(--muted);
+  line-height: 1.7;
+}
+
+.wrap {
+  width: 100%;
+  max-width: 1000px;
+  margin: auto;
+}
+
+.panel {
+  background: rgba(18, 26, 48, .94);
+  border: 1px solid #293a60;
+  border-radius: 18px;
+  padding: 17px;
+  margin: 16px auto;
+  box-shadow: 0 10px 35px #0004;
+}
+
+#status {
+  color: var(--cyan);
+  text-align: center;
+  padding: 12px;
+  line-height: 1.6;
+}
+
+.camera {
+  position: relative;
+  overflow: hidden;
+  background: #02040b;
+  border: 1px solid #355078;
+  border-radius: 16px;
+  width: 100%;
+}
+
+video {
+  width: 100%;
+  display: block;
+  transform: scaleX(-1);
+}
+
+canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 9px;
+  margin-top: 14px;
+}
+
+button, select {
+  font: inherit;
+  border-radius: 10px;
+  padding: 12px 14px;
+}
+
+button {
+  border: 1px solid #4a658c;
+  background: #202d4a;
+  color: white;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+button:hover { filter: brightness(1.2); }
+
+button:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}
+
+.primary {
+  background: linear-gradient(100deg, #08b9d9, #5369ff);
+  border: 0;
+}
+
+.gold {
+  background: linear-gradient(100deg, #9a6a13, #e7b947);
+  color: #171000;
+  border: 0;
+}
+
+#people {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 310px), 1fr));
+  gap: 15px;
+  margin-top: 18px;
+}
+
+.person {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  background: linear-gradient(150deg, #172443, #101629);
+  border: 1px solid #304a77;
+  border-radius: 17px;
+  padding: 17px;
+}
+
+.person h2 {
+  font-size: 20px;
+  margin: 0 0 12px;
+  color: var(--cyan);
+}
+
+.age {
+  font-size: 34px;
+  font-weight: 800;
+  color: var(--green);
+  margin: 8px 0;
+}
+
+.tag {
+  display: inline-block;
+  background: #263755;
+  border-radius: 30px;
+  padding: 5px 10px;
+  margin: 4px 0;
+  font-size: 12px;
+  color: #dbe8ff;
+}
+
+.section {
+  margin-top: 15px;
+  padding: 13px;
+  border-radius: 12px;
+  background: #0c1428;
+  border: 1px solid #2b3b5e;
+}
+
+.section h3 {
+  margin: 0 0 10px;
+  font-size: 15px;
+}
+
+.ethnic h3 { color: var(--cyan); }
+.fortune h3 { color: var(--gold); }
+
+select {
+  width: 100%;
+  background: #f2f5ff;
+  color: #11182a;
+  border: 0;
+  margin: 5px 0;
+}
+
+.description {
+  font-size: 13px;
+  line-height: 1.65;
+  color: var(--muted);
+}
+
+.fortune p {
+  color: #ffefbf;
+  line-height: 1.8;
+  white-space: pre-line;
+  margin: 8px 0;
+}
+
+.fortune .disclaimer {
+  color: #c7b98e;
+  font-size: 11px;
+}
+
+.empty {
+  text-align: center;
+  color: var(--muted);
+  padding: 28px 10px;
+  line-height: 1.8;
+}
+
+footer {
+  text-align: center;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.8;
+  padding: 22px 5px;
+}
 </style>
 </head>
+
 <body>
+<div class="wrap">
 
-<h2>Kamera HP & Tablet + AI Umur</h2>
-<p id="status">Memuat sistem AI...</p>
+<header>
+  <div class="logo">N E O &nbsp; V I S I O N</div>
+  <h1>FACE SCANNER AI</h1>
+  <div class="subtitle">
+    Face Detection · Age Estimation · Ethnicity Selector<br>
+    Future Fortune Generator · Life Timer Comedy · Multi-Face Mode
+  </div>
+</header>
 
-<div class="viewer">
-  <video id="video" autoplay muted playsinline></video>
-  <canvas id="overlay"></canvas>
+<div class="panel">
+  <div id="status">⏳ Menyiapkan model AI...</div>
+
+  <div class="camera">
+    <video id="video" autoplay muted playsinline></video>
+    <canvas id="overlay"></canvas>
+  </div>
+
+  <div class="controls">
+    <button id="start" class="primary" disabled>
+      📸 AKTIFKAN KAMERA
+    </button>
+    <button id="stop">⏹ MATIKAN</button>
+    <button id="refresh">🔄 SCAN ULANG</button>
+  </div>
+
+  <p class="description">
+    Tips: gunakan cahaya yang cukup, hadapkan wajah ke kamera,
+    dan jangan berdiri terlalu jauh. Kamera membutuhkan izin browser.
+  </p>
 </div>
-<div id="hint"></div>
 
-<button id="start">Aktifkan Kamera</button>
-<button id="flip" disabled>Ganti
+<div class="panel">
+  <h2>🧬 HASIL PEMINDAIAN</h2>
+  <div class="description">
+    Setiap orang yang terdeteksi mempunyai kartu sendiri.
+    Pilihan etnis, ramalan masa depan, dan ramalan waktu hidup
+    tersedia secara terpisah untuk setiap kartu.
+  </div>
+
+  <div id="people">
+    <div class="empty">
+      Belum ada wajah.<br>
+      Tekan AKTIFKAN KAMERA untuk memulai.
+    </div>
+  </div>
+</div>
+
+<footer>
+  NEO VISION · DEMO EKSPERIMENTAL<br>
+  Umur merupakan estimasi AI. Etnis dipilih oleh pengguna.
+  Ramalan, status hubungan, dan waktu hidup hanyalah hiburan.
+</footer>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+
+<script>
+"use strict";
+
+const video = document.getElementById("video");
+const canvas = document.getElementById("overlay");
+const ctx = canvas.getContext("2d");
+const statusBox = document.getElementById("status");
+const peopleBox = document.getElementById("people");
+const startBtn = document.getElementById("start");
+const stopBtn = document.getElementById("stop");
+const refreshBtn = document.getElementById("refresh");
+
+const MODEL_URL =
+  "https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js@master/weights";
+
+const ethnicities = [
+  "Belum dipilih",
+  "Sunda",
+  "Jawa",
+  "Batak",
+  "Minangkabau",
+  "Chinese / Tionghoa",
+  "Betawi",
+  "Madura",
+  "Bali",
+  "Dayak",
+  "Bugis",
+  "Aceh",
+  "Melayu",
+  "Ambon",
+  "Papua",
+  "Lainnya",
+  "Tidak ingin menyebutkan"
+];
+
+const fortunes = {
+  cinta: [
+    "💌 CINTA DAN HUBUNGAN\nDalam beberapa waktu ke depan, mungkin ada obrolan menarik dengan seseorang. Jangan langsung menganggap satu pesan sebagai tanda jodoh. Kenali orangnya perlahan, jaga komunikasi, dan tetap jadi diri sendiri.",
+    "💗 CINTA DAN HUBUNGAN\nAda kesempatan mempererat hubungan dengan orang terdekat. Sebuah perhatian kecil bisa lebih berkesan daripada hadiah mahal. Kalau sedang sendiri, perluas pergaulan tanpa memaksakan hasil.",
+    "🌹 CINTA DAN HUBUNGAN\nBab baru dalam hubungan bisa dimulai dari percakapan sederhana. Berani mengungkapkan perasaan boleh saja, tetapi hargai juga jawaban dan batasan orang lain."
+  ],
+  rezeki: [
+    "💰 REZEKI DAN KEUANGAN\nBayangkan peluang kecil yang awalnya terlihat biasa ternyata memberi pengalaman berharga. Dalam kehidupan nyata, keuangan lebih terbantu oleh anggaran yang rapi, kebiasaan menabung, dan keputusan yang tidak terburu-buru.",
+    "🪙 REZEKI DAN KEUANGAN\nRamalan hiburan hari ini: dompetmu ingin diajak bekerja sama! Sisihkan uang untuk kebutuhan utama sebelum membeli sesuatu yang menarik perhatian.",
+    "📈 REZEKI DAN KEUANGAN\nPeluang baru bisa datang dari keterampilan, relasi, atau ide yang selama ini tertunda. Periksa fakta dan hitung risikonya sebelum mengeluarkan modal."
+  ],
+  karier: [
+    "🚀 KARIER DAN AMBISI\nSatu kemampuan yang terus dilatih bisa menjadi keunggulanmu. Coba selesaikan satu pekerjaan penting yang tertunda, lalu evaluasi hasilnya sebelum mengambil tantangan berikutnya.",
+    "🏆 KARIER DAN AMBISI\nMasa depan tidak ditentukan oleh ramalan. Namun, kebiasaan kecil yang konsisten dapat membantumu bergerak menuju target. Pilih satu tujuan yang benar-benar penting minggu ini.",
+    "💡 KARIER DAN AMBISI\nSebuah ide menarik mungkin muncul ketika kamu berhenti terburu-buru. Catat ide tersebut, uji dengan langkah kecil, dan minta masukan dari orang yang kamu percaya."
+  ],
+  perjalanan: [
+    "✈️ PERJALANAN DAN PETUALANGAN\nAda petualangan seru dalam imajinasimu: tempat baru, foto keren, dan kuliner yang bikin ingin kembali. Kalau merencanakan perjalanan sungguhan, cek cuaca, transportasi, dan anggaran lebih dahulu.",
+    "🏔️ PERJALANAN DAN PETUALANGAN\nRamalanmu: kamu mungkin menjadi fotografer dadakan di antara teman-teman. Siapkan baterai, ruang penyimpanan, dan rencana cadangan supaya perjalanan lebih nyaman.",
+    "🚗 PERJALANAN DAN PETUALANGAN\nPetualangan terbaik tidak selalu jauh. Bisa jadi ada tempat menarik yang belum pernah kamu kunjungi di dekat rumah."
+  ],
+  kesehatan: [
+    "🌿 KESEIMBANGAN DIRI\nAnggap ini pengingat untuk memberi waktu bagi tubuh dan pikiran. Tidur cukup, bergerak teratur, makan seimbang, dan mencari bantuan profesional bila ada keluhan jauh lebih berguna daripada mengandalkan ramalan.",
+    "☀️ KESEIMBANGAN DIRI\nJadwalkan waktu untuk beristirahat dan menikmati hal sederhana. Kamu tidak harus menyelesaikan semuanya sekaligus.",
+    "🧘 KESEIMBANGAN DIRI\nMinggu yang baik bisa dimulai dari rutinitas kecil: minum cukup, berjalan sebentar, dan mengurangi waktu layar sebelum tidur."
+  ],
+  kejutan: [
+    "🎁 KEJUTAN KEHIDUPAN\nPlot twist versi hiburan: orang yang biasanya bilang 'terserah' justru punya rekomendasi tempat makan paling bagus. Siapkan diri menghadapi debat memilih menu!",
+    "😂 KEJUTAN KEHIDUPAN\nKamu mungkin mendapat gelar tidak resmi sebagai tempat bertanya teman. Tips ramalan: bantu sebisanya, tetapi kamu juga berhak berkata sedang sibuk.",
+    "🌟 KEJUTAN KEHIDUPAN\nSuatu hari kamu bisa melihat kembali masa sekarang dan tersenyum karena banyak hal ternyata berubah. Ambil foto, catat cerita, dan nikmati prosesnya."
+  ]
+};
+
+const randomItems = [
+  "Ada kemungkinan kamu menemukan hobi baru yang ternyata menyenangkan.",
+  "Seseorang mungkin mengajakmu mencoba makanan yang belum pernah dicicipi.",
+  "Kamu bisa mendapatkan ide bagus ketika sedang santai.",
+  "Satu tugas kecil yang selesai bisa membuat harimu terasa lebih ringan.",
+  "Jangan kaget jika playlist favoritmu diputar berulang kali minggu ini.",
+  "Ramalan kocak: kulkas akan tetap terlihat menarik walau kamu baru saja makan.",
+  "Ada peluang tertawa karena percakapan yang tidak direncanakan.",
+  "Tantangan minggu ini: jangan menunda hal penting hanya demi scroll lima menit."
+];
+
+/* FITUR TAMBAHAN: WAKTU HIDUP VERSI KOMEDI */
+
+const lifeTimeJokes = [
+  {
+    title: "🚨 MODE PANIK",
+    time: "TINGGAL 1 MENIT!",
+    message: "Tenang bro! 😂 Ini cuma angka acak. Satu menit buat menentukan mau makan bakso atau mi ayam."
+  },
+  {
+    title: "⏰ MODE HITUNG MUNDUR",
+    time: "TINGGAL 2 JAM!",
+    message: "Masih sempat nonton film, rebahan, dan mencari camilan. Ini bukan hitungan umur sungguhan."
+  },
+  {
+    title: "🍜 MODE LAPAR",
+    time: "TINGGAL 15 MENIT!",
+    message: "Ramalan ngawur: waktumu habis buat mikir mau makan apa. Eh, ternyata belum pesan makanan!"
+  },
+  {
+    title: "📅 MODE KALENDER",
+    time: "TINGGAL 30 HARI!",
+    message: "Waktunya merencanakan liburan, menabung, dan mengambil foto sebanyak-banyaknya. Ini hanya skenario komedi."
+  },
+  {
+    title: "🎂 MODE ULANG TAHUN",
+    time: "TINGGAL 2 TAHUN!",
+    message: "Dua tahun penuh cerita baru dalam ramalan fiksi ini. Semoga ada banyak alasan untuk tertawa."
+  },
+  {
+    title: "👑 MODE LEGENDA",
+    time: "TINGGAL 100 TAHUN!",
+    message: "Kamu jadi legenda keluarga! Siapkan cerita buat generasi berikutnya. Ini angka lelucon!"
+  },
+  {
+    title: "🚀 MODE MASA DEPAN",
+    time: "TINGGAL 1000 TAHUN!",
+    message: "Kamu masih menunggu Wi-Fi tersambung di tahun 3026. Router-nya sudah jadi artefak museum!"
+  },
+  {
+    title: "🎮 MODE VIDEO GAME",
+    time: "SISA 3 NYAWA!",
+    message: "Ini game apa kehidupan? 😂 Bukan sisa umur sungguhan. Tekan tombol untuk lelucon lain."
+  },
+  {
+    title: "🛌 MODE REBAHAN",
+    time: "WAKTU TAK TERDETEKSI!",
+    message: "AI-nya ikut rebahan dan lupa menghitung. Coba bangun sebentar, siapa tahu ada makanan enak!"
+  },
+  {
+    title: "🎁 MODE BONUS",
+    time: "BONUS 50 TAHUN!",
+    message: "Hadiah dari mesin ramalan bohongan! Jalani hari ini sebaik mungkin dan jangan percaya angka acak."
+  },
+  {
+    title: "😂 MODE SANTAI",
+    time: "TINGGAL 999 HARI!",
+    message: "Cukup buat menghitung berapa kali bilang 'besok aja'. Tapi jangan menunda semua rencana, bro!"
+  },
+  {
+    title: "🌌 MODE GALAKSI",
+    time: "1 JUTA DETIK!",
+    message: "Kamu resmi menjadi penghitung waktu profesional. Mesin ini tetap tidak tahu umur manusia."
+  }
+];
+
+let modelReady = false;
+let stream = null;
+let running = false;
+let busy = false;
+let nextId = 1;
+let tracks = new Map();
+let lastRender = 0;
+
+function pick(array) {
+  return array[Math.floor(Math.random() * array.length)];
+}
+
+function makeFortune() {
+  return [
+    pick(fortunes.cinta),
+    pick(fortunes.rezeki),
+    pick(fortunes.karier),
+    pick(fortunes.perjalanan),
+    pick(fortunes.kesehatan),
+    pick(fortunes.kejutan),
+    "✨ PESAN TAMBAHAN\n" + pick(randomItems)
+  ].join("\n\n");
+}
+
+function getRandomLifeTimeJoke() {
+  return pick(lifeTimeJokes);
+}
+
+function setStatus(message) {
+  statusBox.textContent = message;
+}
+
+async function loadModels() {
+  try {
+    setStatus("⏳ Mengunduh model deteksi wajah dan estimasi umur...");
+    await Promise.all([
+      faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+      faceapi.nets.faceLandmark68TinyNet.loadFromUri(MODEL_URL),
+      faceapi.nets.ageGenderNet.loadFromUri(MODEL_URL)
+    ]);
+
+    modelReady = true;
+    startBtn.disabled = false;
+    setStatus("✅ Model siap. Tekan AKTIFKAN KAMERA.");
+  } catch (error) {
+    console.error(error);
+    setStatus("❌ Model gagal dimuat. Periksa internet, lalu refresh halaman.");
+  }
+}
+
+function resetTracking() {
+  tracks.clear();
+  nextId = 1;
+  renderEmpty();
+}
+
+function renderEmpty() {
+  peopleBox.replaceChildren();
+  const empty = document.createElement("div");
+  empty.className = "empty";
+  empty.textContent =
+    "Belum ada wajah terdeteksi. Hadap kamera dan pastikan pencahayaan cukup.";
+  peopleBox.appendChild(empty);
+}
+
+function stopCamera() {
+  running = false;
+
+  if (stream) {
+    stream.getTracks().forEach(track => track.stop());
+    stream = null;
+  }
+
+  video.srcObject = null;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  resetTracking();
+  setStatus(modelReady ? "Kamera mati. Model AI masih siap." : "Model belum siap.");
+}
+
+async function startCamera() {
+  if (!modelReady || running) return;
+
+  try {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      throw new Error("Kamera memerlukan HTTPS dan dukungan browser.");
+    }
+
+    stopCamera();
+
+    stream = await navigator.mediaDevices.getUserMedia({
+      audio: false,
+      video: {
+        facingMode: "user",
+        width: { ideal: 960 },
+        height: { ideal: 720 }
+      }
+    });
+
+    video.srcObject = stream;
+    await video.play();
+
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+
+    running = true;
+    setStatus("🔍 Memindai wajah...");
+    detectLoop();
+  } catch (error) {
+    console.error(error);
+    setStatus("❌ Kamera tidak bisa dibuka. Izinkan akses kamera di browser.");
+  }
+}
+
+function intersectionOverUnion(a, b) {
+  const x1 = Math.max(a.x, b.x);
+  const y1 = Math.max(a.y, b.y);
+  const x2 = Math.min(a.x + a.width, b.x + b.width);
+  const y2 = Math.min(a.y + a.height, b.y + b.height);
+
+  const intersection =
+    Math.max(0, x2 - x1) * Math.max(0, y2 - y1);
+
+  const union =
+    a.width * a.height + b.width * b.height - intersection;
+
+  return union > 0 ? intersection / union : 0;
+}
+
+function findOrCreateTrack(box) {
+  let bestId = null;
+  let bestScore = 0;
+
+  for (const [id, track] of tracks) {
+    if (track.matched) continue;
+
+    const score = intersectionOverUnion(track.box, box);
+    if (score > bestScore) {
+      bestScore = score;
+      bestId = id;
+    }
+  }
+
+  if (bestId === null || bestScore < 0.18) {
+    bestId = nextId++;
+
+    tracks.set(bestId, {
+      box,
+      matched: true,
+      samples: [],
+      age: null,
+      gender: null,
+      ethnicity: "Belum dipilih",
+      fortune: makeFortune(),
+      createdAt: Date.now()
+    });
+  }
+
+  const track = tracks.get(bestId);
+  track.box = box;
+  track.matched = true;
+  track.lastSeen = Date.now();
+
+  return { id: bestId, track };
+}
+
+function updateAge(track, rawAge, gender) {
+  if (Number.isFinite(rawAge)) {
+    track.samples.push(rawAge);
+
+    if (track.samples.length > 20) track.samples.shift();
+
+    const sorted = [...track.samples].sort((a, b) => a - b);
+    const middle = Math.floor(sorted.length / 2);
+
+    const median = sorted.length % 2
+      ? sorted[middle]
+      : (sorted[middle - 1] + sorted[middle]) / 2;
+
+    track.age = Math.max(1, Math.min(100, Math.round(median)));
+  }
+
+  if (gender) track.gender = gender;
+}
+
+function ageCategory(age) {
+  if (age < 13) return "Anak-anak";
+  if (age < 20) return "Remaja";
+  if (age < 40) return "Dewasa muda";
+  if (age < 60) return "Dewasa";
+  return "Lansia";
+}
+
+function estimateSkin(box) {
+  try {
+    const x = Math.max(0, Math.floor(box.x + box.width * 0.35));
+    const y = Math.max(0, Math.floor(box.y + box.height * 0.38));
+    const w = Math.max(1, Math.min(Math.floor(box.width * 0.25), video.videoWidth - x));
+    const h = Math.max(1, Math.min(Math.floor(box.height * 0.15), video.videoHeight - y));
+
+    const temp = document.createElement("canvas");
+    temp.width = 1;
+    temp.height = 1;
+
+    const tempCtx = temp.getContext("2d", { willReadFrequently: true });
+    tempCtx.drawImage(video, x, y, w, h, 0, 0, 1, 1);
+
+    const data = tempCtx.getImageData(0, 0, 1, 1).data;
+    const brightness = (data[0] + data[1] + data[2]) / 3;
+
+    if (brightness < 65) return "Gelap pada gambar";
+    if (brightness < 105) return "Cenderung gelap pada gambar";
+    if (brightness < 150) return "Sedang pada gambar";
+    if (brightness < 190) return "Terang pada gambar";
+    return "Sangat terang pada gambar";
+  } catch {
+    return "Tidak tersedia";
+  }
+}
+
+function addText(parent, tag, content, className) {
+  const element = document.createElement(tag);
+  element.textContent = content;
+
+  if (className) element.className = className;
+  parent.appendChild(element);
+
+  return element;
+}
+
+/* FITUR BARU: KARTU SISA WAKTU HIDUP */
+
+function createLifeTimeCard(personId) {
+  const section = document.createElement("section");
+  section.className = "section fortune";
+
+  addText(section, "h3", "⏳ SISA WAKTU HIDUP");
+  addText(section, "div", "Kalkulator umur versi komedi 😂", "description");
+
+  const resultBox = document.createElement("div");
+  resultBox.style.background = "#25213b";
+  resultBox.style.border = "1px solid #8062c7";
+  resultBox.style.borderRadius = "12px";
+  resultBox.style.padding = "15px";
+  resultBox.style.marginTop = "12px";
+
+  const jokeTitle = addText(resultBox, "div", "");
+  jokeTitle.style.color = "#c8a9ff";
+  jokeTitle.style.fontWeight = "bold";
+  jokeTitle.style.marginBottom = "8px";
+
+  const jokeTime = addText(resultBox, "div", "");
+  jokeTime.style.color = "#ffe08a";
+  jokeTime.style.fontWeight = "bold";
+  jokeTime.style.fontSize = "25px";
+  jokeTime.style.lineHeight = "1.4";
+
+  const jokeMessage = addText(resultBox, "p", "");
+  jokeMessage.style.color = "#f4edff";
+  jokeMessage.style.lineHeight = "1.8";
+
+  section.appendChild(resultBox);
+
+  function showNewLifeTimeJoke() {
+    const joke = getRandomLifeTimeJoke();
+    jokeTitle.textContent = joke.title;
+    jokeTime.textContent = joke.time;
+    jokeMessage.textContent = joke.message;
+  }
+
+  const button = addText(section, "button", "🎲 HITUNG ULANG");
+  button.className = "gold";
+  button.type = "button";
+  button.addEventListener("click", showNewLifeTimeJoke);
+
+  addText(
+    section,
+    "div",
+    "⚠️ Angka ini dipilih secara acak untuk hiburan. Kamera tidak dapat mengetahui sisa umur atau waktu kematian seseorang.",
+    "disclaimer"
+  );
+
+  showNewLifeTimeJoke();
+  return section;
+}
+
+function createPersonCard(id, track, skin) {
+  const card = document.createElement("article");
+  card.className = "person";
+  card.dataset.personId = String(id);
+
+  addText(card, "h2", "👤 ORANG #" + id);
+  addText(
+    card,
+    "div",
+    track.age === null ? "Umur sedang dianalisis..." : track.age + " tahun",
+    "age"
+  );
+
+  if (track.age !== null) {
+    addText(card, "div", "Kategori: " + ageCategory(track.age), "tag");
+  }
+
+  addText(card, "div", "🎨 " + skin, "tag");
+
+  const ethnicSection = document.createElement("section");
+  ethnicSection.className = "section ethnic";
+
+  addText(ethnicSection, "h3", "🏷️ ETNIS / SUKU");
+  addText(ethnicSection, "div", "Pilih identitas etnis untuk orang ini:", "description");
+
+  const select = document.createElement("select");
+  select.setAttribute("aria-label", "Pilih etnis untuk orang " + id);
+
+  ethnicities.forEach(name => {
+    const option = document.createElement("option");
+    option.value = name;
+    option.textContent = name;
+    select.appendChild(option);
+  });
+
+  select.value = track.ethnicity;
+
+  const selectedLabel = addText(
+    ethnicSection,
+    "div",
+    "Pilihan saat ini: " + track.ethnicity,
+    "description"
+  );
+
+  select.addEventListener("change", () => {
+    track.ethnicity = select.value;
+    selectedLabel.textContent = "Pilihan saat ini: " + track.ethnicity;
+  });
+
+  ethnicSection.appendChild(select);
+  addText(ethnicSection, "div", "Etnis tidak bisa dipastikan secara akurat dari bentuk wajah.", "description");
+  card.appendChild(ethnicSection);
+
+  const fortuneSection = document.createElement("section");
+  fortuneSection.className = "section fortune";
+
+  addText(fortuneSection, "h3", "🔮 RAMALAN MASA DEPAN");
+  addText(fortuneSection, "div", "Ramalan hiburan untuk Orang #" + id, "description");
+
+  const fortuneContent = addText(fortuneSection, "p", track.fortune);
+
+  const newFortuneBtn = addText(fortuneSection, "button", "🎲 RAMALAN BARU");
+  newFortuneBtn.className = "gold";
+  newFortuneBtn.type = "button";
+
+  newFortuneBtn.addEventListener("click", () => {
+    track.fortune = makeFortune();
+    fortuneContent.textContent = track.fortune;
+  });
+
+  addText(
+    fortuneSection,
+    "div",
+    "Ramalan ini dibuat secara acak untuk hiburan, bukan kepastian masa depan.",
+    "disclaimer"
+  );
+
+  card.appendChild(fortuneSection);
+
+  const jokeSection = document.createElement("section");
+  jokeSection.className = "section";
+
+  addText(jokeSection, "h3", "💘 TEBAKAN STATUS HUBUNGAN");
+
+  const relationship = addText(
+    jokeSection,
+    "p",
+    pick([
+      "Tebakan acak: mungkin sedang fokus pada diri sendiri 😎",
+      "Tebakan acak: siapa tahu ada yang sedang kamu taksir 😉",
+      "Tebakan acak: mungkin sedang sibuk mengejar impian 🚀",
+      "Tebakan acak: status rahasia, detektor pun penasaran 😂"
+    ])
+  );
+
+  relationship.className = "description";
+  addText(jokeSection, "div", "Status menikah tidak dapat diketahui dari wajah.", "description");
+  card.appendChild(jokeSection);
+
+  // Fitur tambahan: sisa waktu hidup versi lelucon
+  card.appendChild(createLifeTimeCard(id));
+
+  return card;
+}
+
+function drawBoxes(people) {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  for (const person of people) {
+    const b = person.box;
+    const x = canvas.width - b.x - b.width;
+    const label = "ORANG #" + person.id +
+      (person.track.age === null ? "" : " · " + person.track.age + " th");
+
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = "#39e7ff";
+    ctx.strokeRect(x, b.y, b.width, b.height);
+
+    ctx.font = "bold 15px Arial";
+    const labelWidth = ctx.measureText(label).width + 14;
+    const labelX = Math.max(0, Math.min(x, canvas.width - labelWidth));
+    const labelY = Math.max(0, b.y - 28);
+
+    ctx.fillStyle = "#39e7ff";
+    ctx.fillRect(labelX, labelY, labelWidth, 25);
+
+    ctx.fillStyle = "#08101f";
+    ctx.fillText(label, labelX + 7, labelY + 17);
+  }
+}
+
+function renderPeople(people) {
+  peopleBox.replaceChildren();
+
+  if (!people.length) {
+    renderEmpty();
+    return;
+  }
+
+  for (const person of people) {
+    peopleBox.appendChild(
+      createPersonCard(person.id, person.track, person.skin)
+    );
+  }
+}
+
+async function detectLoop() {
+  if (!running || busy) return;
+
+  busy = true;
+
+  try {
+    if (video.readyState < 2) return;
+
+    for (const track of tracks.values()) {
+      track.matched = false;
+    }
+
+    const detections = await faceapi
+      .detectAllFaces(
+        video,
+        new faceapi.TinyFaceDetectorOptions({
+          inputSize: 416,
+          scoreThreshold: 0.35
+        })
+      )
+      .withFaceLandmarks(true)
+      .withAgeAndGender();
+
+    if (!running) return;
+
+    const people = [];
+
+    for (const detection of detections) {
+      const box = detection.detection.box;
+      const { id, track } = findOrCreateTrack(box);
+
+      updateAge(track, detection.age, detection.gender);
+
+      people.push({
+        id,
+        track,
+        box,
+        skin: estimateSkin(box)
+      });
+    }
+
+    const now = Date.now();
+
+    for (const [id, track] of tracks) {
+      if (now - (track.lastSeen || now) > 3000) {
+        tracks.delete(id);
+      }
+    }
+
+    drawBoxes(people);
+
+    if (now - lastRender > 900) {
+      renderPeople(people);
+      lastRender = now;
+    }
+
+    setStatus(
+      detections.length
+        ? "✅ " + detections.length + " wajah terdeteksi. Ramalan masa depan dan sisa waktu hidup tersedia di kartu."
+        : "🔍 Belum ada wajah. Hadap kamera dan tambah pencahayaan."
+    );
+  } catch (error) {
+    console.error(error);
+    setStatus("⚠️ Deteksi terganggu. Coba refresh halaman.");
+  } finally {
+    busy = false;
+
+    if (running) setTimeout(detectLoop, 350);
+  }
+}
+
+startBtn.addEventListener("click", startCamera);
+stopBtn.addEventListener("click", stopCamera);
+
+refreshBtn.addEventListener("click", () => {
+  if (running) {
+    resetTracking();
+    setStatus("🔄 Pelacakan wajah diulang. Arahkan wajah ke kamera.");
+  } else {
+    setStatus(
+      modelReady
+        ? "Model siap. Aktifkan kamera untuk mulai."
+        : "Model AI masih dimuat."
+    );
+  }
+});
+
+loadModels();
+</script>
+</body>
+</html>
