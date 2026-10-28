@@ -2,367 +2,357 @@
 <!DOCTYPE html>
 <html lang="id">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Kamera AI Prediksi Umur</title>
-
-  <style>
-    * { box-sizing: border-box; }
-
-    body {
-      margin: 0;
-      padding: 20px;
-      background: #101827;
-      color: white;
-      font-family: Arial, sans-serif;
-      text-align: center;
-    }
-
-    h1 { font-size: 25px; }
-
-    #status {
-      padding: 12px;
-      margin: 15px auto;
-      background: #243247;
-      border-radius: 10px;
-      max-width: 500px;
-    }
-
-    #cameraBox {
-      position: relative;
-      width: 100%;
-      max-width: 640px;
-      margin: 15px auto;
-      overflow: hidden;
-      border-radius: 14px;
-      background: #000;
-    }
-
-    video {
-      display: block;
-      width: 100%;
-      height: auto;
-    }
-
-    canvas {
-      position: absolute;
-      left: 0;
-      top: 0;
-      width: 100%;
-      height: 100%;
-      pointer-events: none;
-    }
-
-    button {
-      padding: 13px 18px;
-      margin: 6px;
-      border: 0;
-      border-radius: 9px;
-      font-size: 16px;
-      font-weight: bold;
-      cursor: pointer;
-    }
-
-    #startBtn { background: #22c55e; color: #07130b; }
-    #stopBtn { background: #ef4444; color: white; }
-
-    #result {
-      max-width: 500px;
-      margin: 15px auto;
-      padding: 15px;
-      background: #243247;
-      border-radius: 12px;
-      font-size: 17px;
-      line-height: 1.7;
-    }
-
-    .small {
-      font-size: 13px;
-      color: #cbd5e1;
-    }
-
-    .age {
-      font-size: 30px;
-      font-weight: bold;
-      color: #4ade80;
-    }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Kamera AI Multi Wajah</title>
+<style>
+*{box-sizing:border-box}
+body{
+  margin:0;padding:20px;background:#101827;color:white;
+  font-family:Arial,sans-serif;text-align:center
+}
+h1{font-size:25px}
+#status,.person{
+  max-width:700px;margin:14px auto;padding:14px;
+  background:#243247;border-radius:12px
+}
+#cameraBox{
+  position:relative;width:100%;max-width:700px;
+  margin:15px auto;background:#000;
+  border-radius:14px;overflow:hidden
+}
+video{display:block;width:100%;height:auto}
+canvas{
+  position:absolute;inset:0;width:100%;height:100%;
+  pointer-events:none
+}
+button,select{
+  padding:12px;margin:5px;border:0;border-radius:8px;
+  font-size:15px
+}
+#startBtn{background:#22c55e;font-weight:bold}
+#stopBtn{background:#ef4444;color:white}
+.person{text-align:left;line-height:1.7}
+.age{font-size:27px;font-weight:bold;color:#4ade80}
+.small{font-size:12px;color:#cbd5e1}
+</style>
 </head>
-
 <body>
-  <h1>📸 Kamera AI Prediksi Umur</h1>
-  <p>Arahkan kamera ke wajah untuk melihat hasil perkiraan.</p>
 
-  <div id="status">Memuat sistem AI...</div>
+<h1>📸 Kamera AI Multi Wajah</h1>
+<p>Hadapkan satu orang atau beberapa orang ke kamera.</p>
+<div id="status">Memuat AI...</div>
 
-  <div id="cameraBox">
-    <video id="video" autoplay playsinline muted></video>
-    <canvas id="overlay"></canvas>
-  </div>
+<div id="cameraBox">
+  <video id="video" autoplay playsinline muted></video>
+  <canvas id="overlay"></canvas>
+</div>
 
-  <button id="startBtn" disabled>Aktifkan Kamera</button>
-  <button id="stopBtn">Matikan Kamera</button>
+<button id="startBtn" disabled>Aktifkan Kamera</button>
+<button id="stopBtn">Matikan Kamera</button>
 
-  <div id="result">
-    Hasil prediksi akan muncul di sini.
-  </div>
+<div id="result">Hasil deteksi akan muncul di sini.</div>
 
-  <p class="small">
-    Umur adalah perkiraan AI. Status menikah merupakan tebakan
-    acak untuk hiburan, bukan hasil deteksi wajah.
-  </p>
+<p class="small">
+Umur hanya perkiraan. Status pernikahan tidak dapat diketahui
+dari wajah. Warna kulit dipengaruhi cahaya dan kamera.
+Suku/etnis tidak disimpulkan dari penampilan.
+</p>
 
-  <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+<script>
+const video=document.getElementById("video");
+const canvas=document.getElementById("overlay");
+const ctx=canvas.getContext("2d");
+const statusBox=document.getElementById("status");
+const resultBox=document.getElementById("result");
+const startBtn=document.getElementById("startBtn");
+const stopBtn=document.getElementById("stopBtn");
 
-  <script>
-    const video = document.getElementById("video");
-    const canvas = document.getElementById("overlay");
-    const ctx = canvas.getContext("2d");
-    const statusBox = document.getElementById("status");
-    const resultBox = document.getElementById("result");
-    const startBtn = document.getElementById("startBtn");
-    const stopBtn = document.getElementById("stopBtn");
+const MODEL_URL=
+"https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js@master/weights";
 
-    const MODEL_URL =
-      "https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js@master/weights";
+let ready=false,stream=null,running=false,busy=false;
+let tracks=new Map();
+let nextId=1;
+let lastSeen=new Map();
 
-    let modelsReady = false;
-    let cameraStream = null;
-    let detecting = false;
-    let busy = false;
+async function loadModels(){
+  try{
+    statusBox.textContent="Mengunduh model AI...";
+    await Promise.all([
+      faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+      faceapi.nets.faceLandmark68TinyNet.loadFromUri(MODEL_URL),
+      faceapi.nets.ageGenderNet.loadFromUri(MODEL_URL)
+    ]);
+    ready=true;
+    startBtn.disabled=false;
+    statusBox.textContent="AI siap digunakan.";
+  }catch(e){
+    console.error(e);
+    statusBox.textContent="Model gagal dimuat. Periksa internet.";
+  }
+}
 
-    // Penyimpanan hasil agar umur tidak berubah setiap frame.
-    let ageSamples = [];
-    let fixedAge = null;
-    let fixedMarriageGuess = null;
-    let missingFrames = 0;
+function reset(){
+  tracks.clear();
+  lastSeen.clear();
+  nextId=1;
+}
 
-    async function loadModels() {
-      try {
-        statusBox.textContent = "Sedang mengunduh model AI...";
-
-        await Promise.all([
-          faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
-          faceapi.nets.faceLandmark68TinyNet.loadFromUri(MODEL_URL),
-          faceapi.nets.ageGenderNet.loadFromUri(MODEL_URL)
-        ]);
-
-        modelsReady = true;
-        statusBox.textContent = "AI siap! Tekan Aktifkan Kamera.";
-        startBtn.disabled = false;
-      } catch (err) {
-        console.error(err);
-        statusBox.textContent =
-          "Model AI gagal dimuat. Periksa koneksi internet.";
+async function startCamera(){
+  if(!ready)return;
+  stopCamera();
+  try{
+    stream=await navigator.mediaDevices.getUserMedia({
+      audio:false,
+      video:{
+        facingMode:"user",
+        width:{ideal:640},
+        height:{ideal:480}
       }
+    });
+    video.srcObject=stream;
+    await video.play();
+    canvas.width=video.videoWidth;
+    canvas.height=video.videoHeight;
+    reset();
+    running=true;
+    statusBox.textContent="Kamera aktif. Mencari semua wajah...";
+    detectLoop();
+  }catch(e){
+    console.error(e);
+    statusBox.textContent="Kamera gagal dibuka. Izinkan akses kamera.";
+  }
+}
+
+function stopCamera(){
+  running=false;
+  if(stream){
+    stream.getTracks().forEach(t=>t.stop());
+    stream=null;
+  }
+  video.srcObject=null;
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  reset();
+  resultBox.textContent="Kamera dimatikan.";
+  statusBox.textContent=ready?"AI siap digunakan.":"Memuat AI...";
+}
+
+// Mengukur kemiripan posisi kotak wajah antarkerangka.
+// Ini pelacakan sederhana, bukan pengenalan identitas.
+function iou(a,b){
+  const x1=Math.max(a.x,b.x),y1=Math.max(a.y,b.y);
+  const x2=Math.min(a.x+a.width,b.x+b.width);
+  const y2=Math.min(a.y+a.height,b.y+b.height);
+  const inter=Math.max(0,x2-x1)*Math.max(0,y2-y1);
+  const union=a.width*a.height+b.width*b.height-inter;
+  return union>0?inter/union:0;
+}
+
+function getTrack(box,age){
+  let bestId=null,bestScore=0;
+  for(const [id,t] of tracks){
+    if(t.matched)continue;
+    const score=iou(t.box,box);
+    if(score>bestScore){
+      bestScore=score;
+      bestId=id;
     }
+  }
 
-    async function startCamera() {
-      if (!modelsReady) return;
+  // Jika tidak cocok dengan wajah yang sebelumnya, buat track baru.
+  if(bestId===null||bestScore<0.2){
+    bestId=nextId++;
+    tracks.set(bestId,{
+      box,ages:[],age:null,marriage:null,matched:true
+    });
+  }
 
-      stopCamera();
+  const t=tracks.get(bestId);
+  t.box=box;
+  t.matched=true;
+  lastSeen.set(bestId,Date.now());
 
-      try {
-        cameraStream = await navigator.mediaDevices.getUserMedia({
-          audio: false,
-          video: {
-            facingMode: "user",
-            width: { ideal: 640 },
-            height: { ideal: 480 }
-          }
-        });
+  if(t.age===null){
+    t.ages.push(age);
+    if(t.ages.length>15)t.ages.shift();
 
-        video.srcObject = cameraStream;
-        await video.play();
+    // Tunggu lebih banyak sampel sebelum mengunci angka umur.
+    if(t.ages.length>=10){
+      const sorted=[...t.ages].sort((a,b)=>a-b);
+      t.age=Math.max(1,Math.min(100,
+        Math.round(sorted[Math.floor(sorted.length/2)])));
+      t.marriage=Math.random()<0.5
+        ?"Kemungkinan sudah menikah"
+        :"Kemungkinan belum menikah";
+    }
+  }
+  return {id:bestId,track:t};
+}
 
-        canvas.width = video.videoWidth;
-        canvas.height = video.videoHeight;
+function ageGroup(age){
+  if(age<13)return"Anak-anak";
+  if(age<20)return"Remaja";
+  if(age<40)return"Dewasa muda";
+  if(age<60)return"Dewasa";
+  return"Lansia";
+}
 
-        resetPrediction();
-        detecting = true;
-        statusBox.textContent = "Kamera aktif. Mencari wajah...";
-        detectLoop();
+function skinEstimate(video,box){
+  // Sampel area tengah wajah sebagai warna visual kasar.
+  // Ini bukan penilaian ras, etnis, atau identitas.
+  const x=Math.max(0,Math.floor(box.x+box.width*.35));
+  const y=Math.max(0,Math.floor(box.y+box.height*.40));
+  const w=Math.max(1,Math.min(
+    Math.floor(box.width*.3),video.videoWidth-x));
+  const h=Math.max(1,Math.min(
+    Math.floor(box.height*.15),video.videoHeight-y));
 
-      } catch (err) {
-        console.error(err);
-        statusBox.textContent =
-          "Kamera gagal dibuka. Izinkan akses kamera di browser.";
+  if(w<1||h<1)return"Belum dapat diperkirakan";
+
+  const sample=document.createElement("canvas");
+  sample.width=1;sample.height=1;
+  const sctx=sample.getContext("2d",{willReadFrequently:true});
+  sctx.drawImage(video,x,y,w,h,0,0,1,1);
+  const d=sctx.getImageData(0,0,1,1).data;
+
+  const r=d[0],g=d[1],b=d[2];
+  const brightness=(r+g+b)/3;
+
+  if(brightness<65)return"Sangat gelap (estimasi visual)";
+  if(brightness<105)return"Gelap (estimasi visual)";
+  if(brightness<150)return"Sedang/sawo matang (estimasi visual)";
+  if(brightness<190)return"Terang/langsat (estimasi visual)";
+  return"Sangat terang (estimasi visual)";
+}
+
+async function detectLoop(){
+  if(!running||busy)return;
+  busy=true;
+
+  try{
+    if(video.readyState>=2){
+      for(const t of tracks.values())t.matched=false;
+
+      const faces=await faceapi
+        .detectAllFaces(video,new faceapi.TinyFaceDetectorOptions({
+          inputSize:416,scoreThreshold:0.35
+        }))
+        .withFaceLandmarks(true)
+        .withAgeAndGender();
+
+      if(!running)return;
+
+      ctx.clearRect(0,0,canvas.width,canvas.height);
+      const resized=faceapi.resizeResults(faces,{
+        width:canvas.width,height:canvas.height
+      });
+
+      const people=[];
+      for(let i=0;i<faces.length;i++){
+        const f=faces[i];
+        const box=f.detection.box;
+        const {id,track}=getTrack(box,f.age);
+        const skin=skinEstimate(video,box);
+        people.push({id,track,box,skin,confidence:
+          Math.round(f.detection.score*100)});
       }
-    }
 
-    function resetPrediction() {
-      ageSamples = [];
-      fixedAge = null;
-      fixedMarriageGuess = null;
-      missingFrames = 0;
-    }
-
-    function stopCamera() {
-      detecting = false;
-
-      if (cameraStream) {
-        cameraStream.getTracks().forEach(track => track.stop());
-        cameraStream = null;
-      }
-
-      video.srcObject = null;
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
-      resetPrediction();
-
-      resultBox.textContent = "Kamera dimatikan.";
-      statusBox.textContent = modelsReady
-        ? "AI siap digunakan."
-        : "Memuat model AI...";
-    }
-
-    function ageGroup(age) {
-      if (age < 13) return "Anak-anak";
-      if (age < 20) return "Remaja";
-      if (age < 40) return "Dewasa muda";
-      if (age < 60) return "Dewasa";
-      return "Lansia";
-    }
-
-    // Mengambil nilai tengah agar hasil lebih stabil.
-    function median(values) {
-      const sorted = [...values].sort((a, b) => a - b);
-      const mid = Math.floor(sorted.length / 2);
-
-      return sorted.length % 2
-        ? sorted[mid]
-        : (sorted[mid - 1] + sorted[mid]) / 2;
-    }
-
-    async function detectLoop() {
-      if (!detecting || busy) return;
-      busy = true;
-
-      try {
-        if (video.readyState >= 2) {
-          const detections = await faceapi
-            .detectAllFaces(
-              video,
-              new faceapi.TinyFaceDetectorOptions({
-                inputSize: 320,
-                scoreThreshold: 0.35
-              })
-            )
-            .withFaceLandmarks(true)
-            .withAgeAndGender();
-
-          if (!detecting) return;
-
-          ctx.clearRect(0, 0, canvas.width, canvas.height);
-
-          const resized = faceapi.resizeResults(detections, {
-            width: canvas.width,
-            height: canvas.height
-          });
-
-          faceapi.draw.drawDetections(canvas, resized);
-
-          if (detections.length === 0) {
-            missingFrames++;
-
-            statusBox.textContent =
-              "Wajah belum terdeteksi. Hadap kamera dan tambah pencahayaan.";
-
-            if (missingFrames > 5) {
-              resetPrediction();
-              resultBox.textContent = "Belum ada wajah terdeteksi.";
-            }
-          } else {
-            missingFrames = 0;
-
-            // Mode utama: satu wajah di depan kamera.
-            // Untuk banyak wajah, tiap wajah belum memiliki
-            // pelacakan identitas yang terpisah.
-            const face = detections[0];
-
-            if (fixedAge === null) {
-              ageSamples.push(face.age);
-
-              statusBox.textContent =
-                "Menganalisis umur... " +
-                Math.min(ageSamples.length, 7) + "/7";
-
-              if (ageSamples.length >= 7) {
-                fixedAge = Math.max(
-                  1,
-                  Math.min(100, Math.round(median(ageSamples)))
-                );
-
-                // Label acak, bukan inferensi dari wajah.
-                fixedMarriageGuess = Math.random() < 0.5
-                  ? "Kemungkinan sudah menikah"
-                  : "Kemungkinan belum menikah";
-              }
-            }
-
-            if (fixedAge !== null) {
-              statusBox.textContent = "Wajah terdeteksi!";
-
-              resultBox.replaceChildren();
-
-              const ageTitle = document.createElement("div");
-              ageTitle.className = "age";
-              ageTitle.textContent = fixedAge + " tahun";
-
-              const group = document.createElement("div");
-              group.textContent = "Kategori: " + ageGroup(fixedAge);
-
-              const marriage = document.createElement("div");
-              marriage.textContent = "Status: " + fixedMarriageGuess;
-
-              const note = document.createElement("p");
-              note.className = "small";
-              note.textContent =
-                "Status menikah dipilih secara acak untuk hiburan.";
-
-              resultBox.append(ageTitle, group, marriage, note);
-
-              const box = face.detection.box;
-              const label = fixedAge + " tahun";
-
-              ctx.font = "bold 17px Arial";
-              const labelWidth = ctx.measureText(label).width + 12;
-              const labelX = Math.max(
-                0,
-                Math.min(box.x, canvas.width - labelWidth)
-              );
-              const labelY = Math.max(0, box.y - 28);
-
-              ctx.fillStyle = "#22c55e";
-              ctx.fillRect(labelX, labelY, labelWidth, 26);
-
-              ctx.fillStyle = "#07130b";
-              ctx.fillText(label, labelX + 6, labelY + 18);
-            }
-          }
-        }
-      } catch (err) {
-        console.error(err);
-        statusBox.textContent =
-          "AI mengalami kendala. Periksa koneksi dan model.";
-      } finally {
-        busy = false;
-
-        if (detecting) {
-          setTimeout(detectLoop, 350);
+      // Hapus track yang hilang lebih dari 2,5 detik.
+      const now=Date.now();
+      for(const [id,time] of lastSeen){
+        if(now-time>2500){
+          lastSeen.delete(id);
+          tracks.delete(id);
         }
       }
-    }
 
-    startBtn.addEventListener("click", startCamera);
-    stopBtn.addEventListener("click", stopCamera);
+      statusBox.textContent=faces.length
+        ?faces.length+" wajah terdeteksi."
+        :"Belum ada wajah terdeteksi. Hadap kamera dan tambah cahaya.";
 
-    if (navigator.mediaDevices &&
-        navigator.mediaDevices.getUserMedia) {
-      loadModels();
-    } else {
-      statusBox.textContent =
-        "Browser tidak mendukung kamera. Gunakan HTTPS.";
+      resultBox.replaceChildren();
+
+      if(!faces.length){
+        resultBox.textContent="Belum ada wajah terdeteksi.";
+      }
+
+      people.forEach(p=>{
+        const t=p.track;
+        const box=p.box;
+        const label=t.age!==null
+          ?t.age+" tahun"
+          :"Menganalisis umur...";
+
+        ctx.strokeStyle="#22c55e";
+        ctx.lineWidth=3;
+        ctx.strokeRect(box.x,box.y,box.width,box.height);
+
+        ctx.font="bold 16px Arial";
+        const labelWidth=ctx.measureText(label).width+12;
+        const labelX=Math.max(0,Math.min(
+          box.x,canvas.width-labelWidth));
+        const labelY=Math.max(0,box.y-27);
+        ctx.fillStyle="#22c55e";
+        ctx.fillRect(labelX,labelY,labelWidth,25);
+        ctx.fillStyle="#07130b";
+        ctx.fillText(label,labelX+6,labelY+18);
+
+        const card=document.createElement("div");
+        card.className="person";
+
+        const title=document.createElement("div");
+        title.className="age";
+        title.textContent="Orang #"+p.id+": "+label;
+        card.appendChild(title);
+
+        const group=document.createElement("div");
+        group.textContent=t.age!==null
+          ?"Kategori: "+ageGroup(t.age)
+          :"Kategori: menunggu hasil AI";
+        card.appendChild(group);
+
+        const marriage=document.createElement("div");
+        marriage.textContent="Status menikah: "+
+          (t.marriage||"Belum ditentukan");
+        card.appendChild(marriage);
+
+        const skin=document.createElement("div");
+        skin.textContent="Warna kulit visual: "+p.skin;
+        card.appendChild(skin);
+
+        const ethnicity=document.createElement("div");
+        ethnicity.textContent="Suku/etnis: Tidak diketahui";
+        card.appendChild(ethnicity);
+
+        const note=document.createElement("div");
+        note.className="small";
+        note.textContent=
+          "Umur adalah estimasi AI. Status menikah adalah tebakan acak. " +
+          "Warna kulit dipengaruhi cahaya. Suku/etnis tidak disimpulkan dari wajah.";
+        card.appendChild(note);
+
+        resultBox.appendChild(card);
+      });
     }
-  </script>
+  }catch(e){
+    console.error(e);
+    statusBox.textContent="Deteksi gagal. Periksa koneksi dan model AI.";
+  }finally{
+    busy=false;
+    if(running)setTimeout(detectLoop,300);
+  }
+}
+
+startBtn.addEventListener("click",startCamera);
+stopBtn.addEventListener("click",stopCamera);
+
+if(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia){
+  loadModels();
+}else{
+  statusBox.textContent="Gunakan browser yang mendukung kamera melalui HTTPS.";
+}
+</script>
 </body>
 </html>
