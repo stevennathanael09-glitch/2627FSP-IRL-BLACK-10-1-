@@ -4,11 +4,11 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Kamera AI Multi Wajah</title>
+<title>Kamera AI Umur & Ramalan</title>
 <style>
 *{box-sizing:border-box}
 body{
-  margin:0;padding:20px;background:#101827;color:white;
+  margin:0;padding:18px;background:#101827;color:#fff;
   font-family:Arial,sans-serif;text-align:center
 }
 h1{font-size:25px}
@@ -27,21 +27,26 @@ canvas{
   pointer-events:none
 }
 button,select{
-  padding:12px;margin:5px;border:0;border-radius:8px;
-  font-size:15px
+  padding:11px;margin:5px;border:0;border-radius:8px;
+  font-size:15px;max-width:100%
 }
+button{cursor:pointer}
 #startBtn{background:#22c55e;font-weight:bold}
 #stopBtn{background:#ef4444;color:white}
-.person{text-align:left;line-height:1.7}
+.person{text-align:left;line-height:1.65;overflow-wrap:anywhere}
 .age{font-size:27px;font-weight:bold;color:#4ade80}
 .small{font-size:12px;color:#cbd5e1}
+select{background:#fff;color:#111}
+.person select{width:100%;margin:5px 0}
+.fortune{color:#fcd34d;margin-top:8px}
 </style>
 </head>
 <body>
 
-<h1>📸 Kamera AI Multi Wajah</h1>
-<p>Hadapkan satu orang atau beberapa orang ke kamera.</p>
-<div id="status">Memuat AI...</div>
+<h1>📸 Kamera AI Umur & Ramalan</h1>
+<p>Arahkan kamera ke satu orang atau beberapa orang.</p>
+
+<div id="status">Memuat model AI...</div>
 
 <div id="cameraBox">
   <video id="video" autoplay playsinline muted></video>
@@ -54,9 +59,9 @@ button,select{
 <div id="result">Hasil deteksi akan muncul di sini.</div>
 
 <p class="small">
-Umur hanya perkiraan. Status pernikahan tidak dapat diketahui
-dari wajah. Warna kulit dipengaruhi cahaya dan kamera.
-Suku/etnis tidak disimpulkan dari penampilan.
+Umur adalah perkiraan AI. Status pernikahan dan ramalan hanya
+hiburan. Warna kulit visual dipengaruhi pencahayaan.
+Suku/etnis dipilih sendiri, bukan disimpulkan dari wajah.
 </p>
 
 <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
@@ -77,6 +82,26 @@ let tracks=new Map();
 let nextId=1;
 let lastSeen=new Map();
 
+const ethnicities=[
+  "Belum dipilih","Sunda","Jawa","Batak","Minang",
+  "Chinese","Betawi","Madura","Bali","Dayak","Lainnya"
+];
+
+const fortunes=[
+  "Dalam 3 bulan, kamu bakal kenalan dengan tetangga yang hobi karaoke.",
+  "Dalam 6 bulan, teman lama mungkin mengajak makan—eh, kamu yang bayar!",
+  "Tahun depan, kamu berpeluang punya hobi baru yang bikin dompet menjerit.",
+  "Dalam beberapa minggu, kamu bakal mendengar gosip menarik di lingkungan rumah.",
+  "Suatu hari nanti, kamu bisa jadi orang paling sibuk saat kumpul keluarga.",
+  "Ada peluang mendapat rezeki tak terduga, lalu bingung mau dibelikan apa.",
+  "Kamu mungkin masuk kamar lalu lupa mau mengambil apa. Misteri kehidupan!",
+  "Kamu berpotensi menjadi penasihat cinta teman, meski urusan sendiri misterius.",
+  "Ada kemungkinan diajak jalan saat kamu justru ingin rebahan.",
+  "Orang yang awalnya menyebalkan bisa jadi teman baikmu.",
+  "Ramalan spesial: kamu bakal tertawa, lalu meminta ramalan yang lebih akurat.",
+  "Tetangga masa depanmu mungkin tahu berita satu kompleks sebelum grup WhatsApp."
+];
+
 async function loadModels(){
   try{
     statusBox.textContent="Mengunduh model AI...";
@@ -87,10 +112,11 @@ async function loadModels(){
     ]);
     ready=true;
     startBtn.disabled=false;
-    statusBox.textContent="AI siap digunakan.";
+    statusBox.textContent="AI siap digunakan!";
   }catch(e){
     console.error(e);
-    statusBox.textContent="Model gagal dimuat. Periksa internet.";
+    statusBox.textContent=
+      "Model gagal dimuat. Periksa koneksi internet.";
   }
 }
 
@@ -98,6 +124,19 @@ function reset(){
   tracks.clear();
   lastSeen.clear();
   nextId=1;
+}
+
+function stopCamera(){
+  running=false;
+  if(stream){
+    stream.getTracks().forEach(t=>t.stop());
+    stream=null;
+  }
+  video.srcObject=null;
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  reset();
+  resultBox.textContent="Kamera dimatikan.";
+  statusBox.textContent=ready?"AI siap digunakan.":"Memuat AI...";
 }
 
 async function startCamera(){
@@ -118,29 +157,16 @@ async function startCamera(){
     canvas.height=video.videoHeight;
     reset();
     running=true;
-    statusBox.textContent="Kamera aktif. Mencari semua wajah...";
+    statusBox.textContent="Kamera aktif. Mencari wajah...";
     detectLoop();
   }catch(e){
     console.error(e);
-    statusBox.textContent="Kamera gagal dibuka. Izinkan akses kamera.";
+    statusBox.textContent=
+      "Kamera gagal dibuka. Periksa izin kamera browser.";
   }
 }
 
-function stopCamera(){
-  running=false;
-  if(stream){
-    stream.getTracks().forEach(t=>t.stop());
-    stream=null;
-  }
-  video.srcObject=null;
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-  reset();
-  resultBox.textContent="Kamera dimatikan.";
-  statusBox.textContent=ready?"AI siap digunakan.":"Memuat AI...";
-}
-
-// Mengukur kemiripan posisi kotak wajah antarkerangka.
-// Ini pelacakan sederhana, bukan pengenalan identitas.
+// Pelacakan sederhana berdasarkan posisi kotak wajah.
 function iou(a,b){
   const x1=Math.max(a.x,b.x),y1=Math.max(a.y,b.y);
   const x2=Math.min(a.x+a.width,b.x+b.width);
@@ -152,6 +178,7 @@ function iou(a,b){
 
 function getTrack(box,age){
   let bestId=null,bestScore=0;
+
   for(const [id,t] of tracks){
     if(t.matched)continue;
     const score=iou(t.box,box);
@@ -161,11 +188,11 @@ function getTrack(box,age){
     }
   }
 
-  // Jika tidak cocok dengan wajah yang sebelumnya, buat track baru.
   if(bestId===null||bestScore<0.2){
     bestId=nextId++;
     tracks.set(bestId,{
-      box,ages:[],age:null,marriage:null,matched:true
+      box,ages:[],age:null,marriage:null,
+      fortune:null,ethnicity:"Belum dipilih",matched:true
     });
   }
 
@@ -178,14 +205,17 @@ function getTrack(box,age){
     t.ages.push(age);
     if(t.ages.length>15)t.ages.shift();
 
-    // Tunggu lebih banyak sampel sebelum mengunci angka umur.
+    // Kunci umur setelah 10 sampel prediksi.
     if(t.ages.length>=10){
       const sorted=[...t.ages].sort((a,b)=>a-b);
       t.age=Math.max(1,Math.min(100,
         Math.round(sorted[Math.floor(sorted.length/2)])));
       t.marriage=Math.random()<0.5
-        ?"Kemungkinan sudah menikah"
-        :"Kemungkinan belum menikah";
+        ?"Tebakan: kemungkinan sudah menikah"
+        :"Tebakan: kemungkinan belum menikah";
+      t.fortune=fortunes[
+        Math.floor(Math.random()*fortunes.length)
+      ];
     }
   }
   return {id:bestId,track:t};
@@ -199,9 +229,10 @@ function ageGroup(age){
   return"Lansia";
 }
 
-function skinEstimate(video,box){
-  // Sampel area tengah wajah sebagai warna visual kasar.
-  // Ini bukan penilaian ras, etnis, atau identitas.
+function skinEstimate(box){
+  // Estimasi kecerahan warna piksel dari area tengah wajah.
+  // Hasil kasar dan dapat keliru akibat cahaya, bayangan,
+  // white balance, makeup, atau posisi wajah.
   const x=Math.max(0,Math.floor(box.x+box.width*.35));
   const y=Math.max(0,Math.floor(box.y+box.height*.40));
   const w=Math.max(1,Math.min(
@@ -216,15 +247,21 @@ function skinEstimate(video,box){
   const sctx=sample.getContext("2d",{willReadFrequently:true});
   sctx.drawImage(video,x,y,w,h,0,0,1,1);
   const d=sctx.getImageData(0,0,1,1).data;
+  const brightness=(d[0]+d[1]+d[2])/3;
 
-  const r=d[0],g=d[1],b=d[2];
-  const brightness=(r+g+b)/3;
+  if(brightness<65)return"Sangat gelap (visual)";
+  if(brightness<105)return"Gelap (visual)";
+  if(brightness<150)return"Sedang/sawo matang (visual)";
+  if(brightness<190)return"Terang/langsat (visual)";
+  return"Sangat terang (visual)";
+}
 
-  if(brightness<65)return"Sangat gelap (estimasi visual)";
-  if(brightness<105)return"Gelap (estimasi visual)";
-  if(brightness<150)return"Sedang/sawo matang (estimasi visual)";
-  if(brightness<190)return"Terang/langsat (estimasi visual)";
-  return"Sangat terang (estimasi visual)";
+function addText(parent,text,className){
+  const el=document.createElement("div");
+  el.textContent=text;
+  if(className)el.className=className;
+  parent.appendChild(el);
+  return el;
 }
 
 async function detectLoop(){
@@ -245,21 +282,18 @@ async function detectLoop(){
       if(!running)return;
 
       ctx.clearRect(0,0,canvas.width,canvas.height);
-      const resized=faceapi.resizeResults(faces,{
-        width:canvas.width,height:canvas.height
-      });
-
       const people=[];
-      for(let i=0;i<faces.length;i++){
-        const f=faces[i];
+
+      for(const f of faces){
         const box=f.detection.box;
         const {id,track}=getTrack(box,f.age);
-        const skin=skinEstimate(video,box);
-        people.push({id,track,box,skin,confidence:
-          Math.round(f.detection.score*100)});
+        people.push({
+          id,track,box,
+          skin:skinEstimate(box),
+          confidence:Math.round(f.detection.score*100)
+        });
       }
 
-      // Hapus track yang hilang lebih dari 2,5 detik.
       const now=Date.now();
       for(const [id,time] of lastSeen){
         if(now-time>2500){
@@ -270,7 +304,7 @@ async function detectLoop(){
 
       statusBox.textContent=faces.length
         ?faces.length+" wajah terdeteksi."
-        :"Belum ada wajah terdeteksi. Hadap kamera dan tambah cahaya.";
+        :"Belum ada wajah. Hadap kamera dan tambah pencahayaan.";
 
       resultBox.replaceChildren();
 
@@ -278,67 +312,76 @@ async function detectLoop(){
         resultBox.textContent="Belum ada wajah terdeteksi.";
       }
 
-      people.forEach(p=>{
-        const t=p.track;
-        const box=p.box;
-        const label=t.age!==null
-          ?t.age+" tahun"
-          :"Menganalisis umur...";
+      for(const p of people){
+        const t=p.track,b=p.box;
+        const label=t.age!==null?t.age+" tahun":"Menganalisis umur...";
 
         ctx.strokeStyle="#22c55e";
         ctx.lineWidth=3;
-        ctx.strokeRect(box.x,box.y,box.width,box.height);
+        ctx.strokeRect(b.x,b.y,b.width,b.height);
 
         ctx.font="bold 16px Arial";
-        const labelWidth=ctx.measureText(label).width+12;
-        const labelX=Math.max(0,Math.min(
-          box.x,canvas.width-labelWidth));
-        const labelY=Math.max(0,box.y-27);
+        const lw=ctx.measureText(label).width+12;
+        const lx=Math.max(0,Math.min(b.x,canvas.width-lw));
+        const ly=Math.max(0,b.y-27);
         ctx.fillStyle="#22c55e";
-        ctx.fillRect(labelX,labelY,labelWidth,25);
+        ctx.fillRect(lx,ly,lw,25);
         ctx.fillStyle="#07130b";
-        ctx.fillText(label,labelX+6,labelY+18);
+        ctx.fillText(label,lx+6,ly+18);
 
         const card=document.createElement("div");
         card.className="person";
+        addText(card,"Orang #"+p.id+": "+label,"age");
 
-        const title=document.createElement("div");
-        title.className="age";
-        title.textContent="Orang #"+p.id+": "+label;
-        card.appendChild(title);
+        addText(card,t.age!==null
+          ?"Kategori umur: "+ageGroup(t.age)
+          :"Kategori umur: menunggu hasil AI");
 
-        const group=document.createElement("div");
-        group.textContent=t.age!==null
-          ?"Kategori: "+ageGroup(t.age)
-          :"Kategori: menunggu hasil AI";
-        card.appendChild(group);
+        addText(card,"Status menikah: "+
+          (t.marriage||"Menunggu prediksi"));
 
-        const marriage=document.createElement("div");
-        marriage.textContent="Status menikah: "+
-          (t.marriage||"Belum ditentukan");
-        card.appendChild(marriage);
+        addText(card,"Warna kulit visual: "+p.skin);
 
-        const skin=document.createElement("div");
-        skin.textContent="Warna kulit visual: "+p.skin;
-        card.appendChild(skin);
+        addText(card,"Tingkat deteksi wajah: "+p.confidence+"%");
 
-        const ethnicity=document.createElement("div");
-        ethnicity.textContent="Suku/etnis: Tidak diketahui";
-        card.appendChild(ethnicity);
+        const select=document.createElement("select");
+        select.setAttribute("aria-label","Pilih suku atau etnis untuk orang #"+p.id);
 
-        const note=document.createElement("div");
-        note.className="small";
-        note.textContent=
-          "Umur adalah estimasi AI. Status menikah adalah tebakan acak. " +
-          "Warna kulit dipengaruhi cahaya. Suku/etnis tidak disimpulkan dari wajah.";
-        card.appendChild(note);
+        ethnicities.forEach(name=>{
+          const option=document.createElement("option");
+          option.value=name;
+          option.textContent=name;
+          select.appendChild(option);
+        });
+
+        select.value=t.ethnicity;
+        select.addEventListener("change",()=>{
+          t.ethnicity=select.value;
+          ethnicityLabel.textContent="Suku/etnis pilihan: "+t.ethnicity;
+        });
+
+        card.appendChild(document.createTextNode("Suku/etnis: "));
+        card.appendChild(select);
+
+        const ethnicityLabel=document.createElement("div");
+        ethnicityLabel.textContent="Suku/etnis pilihan: "+t.ethnicity;
+        card.appendChild(ethnicityLabel);
+
+        addText(card,"🔮 Ramalan masa depan: "+
+          (t.fortune||"Sedang menyiapkan ramalan..."),"fortune");
+
+        addText(card,
+          "Catatan: ramalan dan status menikah hanya hiburan. "+
+          "Suku/etnis dipilih sendiri, bukan dideteksi dari wajah.",
+          "small");
 
         resultBox.appendChild(card);
-      });
+      }
     }
   }catch(e){
     console.error(e);
-    statusBox.textContent="Deteksi gagal. Periksa koneksi dan model AI.";
+    statusBox.textContent=
+      "Deteksi mengalami kendala. Periksa koneksi dan model AI.";
   }finally{
     busy=false;
     if(running)setTimeout(detectLoop,300);
@@ -351,7 +394,8 @@ stopBtn.addEventListener("click",stopCamera);
 if(navigator.mediaDevices&&navigator.mediaDevices.getUserMedia){
   loadModels();
 }else{
-  statusBox.textContent="Gunakan browser yang mendukung kamera melalui HTTPS.";
+  statusBox.textContent=
+    "Gunakan browser yang mendukung kamera melalui HTTPS.";
 }
 </script>
 </body>
